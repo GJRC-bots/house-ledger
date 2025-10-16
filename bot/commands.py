@@ -1,4 +1,5 @@
 from __future__ import annotations
+from importlib.metadata import files
 from typing import Optional
 
 import discord
@@ -8,6 +9,7 @@ from discord.ext import commands
 from bot.config import ConfigManager
 from bot.scoring import ScoreManager
 from utils.helpers import is_admin_or_mod_check, embed_kv, title_case_house
+from utils.embeds import create_diag_embed, create_standings_embed, create_main_standings_embed, create_overall_leaderboard_embed, create_house_leaderboard_embed
 
 def setup_commands(
     *,
@@ -46,22 +48,7 @@ def setup_commands(
         weighting = config_mgr.data.get("weighting", {})
         houses = score_mgr.get_house_totals()
 
-        embed = discord.Embed(title="HOUSE LEDGER — DIAGNOSTICS", color=0x0E171B)
-        embed.add_field(name="Guild", value=f"{guild.name} ({guild.id})", inline=False)
-        embed.add_field(name="Weighting", value=embed_kv({
-            "enabled": str(weighting.get("enabled", False)),
-            "rounding": weighting.get("rounding", "round")
-        }), inline=False)
-        if show_members:
-            embed.add_field(name="Member Counts", value=embed_kv({
-                "House Veridian": vr_count,
-                "Feathered Host": fh_count
-            }), inline=False)
-        embed.add_field(name="House Totals", value=embed_kv({
-            "House Veridian": houses.get("house_veridian", 0),
-            "Feathered Host": houses.get("feathered_host", 0)
-        }), inline=False)
-        embed.set_footer(text="All Offerings are recorded. Balance will be kept.")
+        embed = create_diag_embed(guild, weighting, vr_count, fh_count, houses, show_members)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     #  Config: weighting
@@ -86,11 +73,67 @@ def setup_commands(
     #  Standings
     @tree.command(name="standings_house", description="Show current house leaderboard.", **guild_kw)
     async def standings_house(interaction: discord.Interaction):
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message("Run this inside a server.", ephemeral=True)
+            return
+
         houses = score_mgr.get_house_totals()
-        ordered = sorted(houses.items(), key=lambda kv: kv[1], reverse=True)
-        lines = [f"**{title_case_house(name)}** — {pts} pts" for name, pts in ordered]
-        embed = discord.Embed(title="HOUSE LEDGER — STANDINGS", description="\n".join(lines), color=0xB0A77C)
-        await interaction.response.send_message(embed=embed)
+        top_players = score_mgr.get_top_players(10)
+        embeds, files = create_standings_embed(guild, houses, top_players, config_mgr)
+        await interaction.response.send_message(embeds=embeds, files=files)
+
+    @tree.command(name="standings_main", description="Show main house standings with progress bars.", **guild_kw)
+    async def standings_main(interaction: discord.Interaction):
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message("Run this inside a server.", ephemeral=True)
+            return
+
+        houses = score_mgr.get_house_totals()
+        embed, files = create_main_standings_embed(guild, houses, config_mgr)
+        await interaction.response.send_message(embed=embed, files=files)
+
+    @tree.command(name="standings_overall", description="Show overall player leaderboard.", **guild_kw)
+    async def standings_overall(interaction: discord.Interaction):
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message("Run this inside a server.", ephemeral=True)
+            return
+
+        top_players = score_mgr.get_top_players(15)
+        embed, files = create_overall_leaderboard_embed(guild, top_players, config_mgr)
+        await interaction.response.send_message(embed=embed, files=files)
+
+    @tree.command(name="standings_veridian", description="Show House Veridian leaderboard.", **guild_kw)
+    async def standings_veridian(interaction: discord.Interaction):
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message("Run this inside a server.", ephemeral=True)
+            return
+
+        houses = score_mgr.get_house_totals()
+        top_players = score_mgr.get_top_players(15)
+        embed, files = create_house_leaderboard_embed(guild, houses, top_players, config_mgr, "house_veridian")
+        if embed:
+            await interaction.response.send_message(embed=embed, files=files)
+        else:
+            await interaction.response.send_message("House Veridian data not available.", ephemeral=True)
+
+    @tree.command(name="standings_feathered", description="Show Feathered Host leaderboard.", **guild_kw)
+    async def standings_feathered(interaction: discord.Interaction):
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message("Run this inside a server.", ephemeral=True)
+            return
+
+        houses = score_mgr.get_house_totals()
+        top_players = score_mgr.get_top_players(15)
+        embed, files = create_house_leaderboard_embed(guild, houses, top_players, config_mgr, "feathered_host")
+        if embed:
+            await interaction.response.send_message(embed=embed, files=files)
+        else:
+            await interaction.response.send_message("Feathered Host data not available.", ephemeral=True)
 
     #  Scoring
     @tree.command(name="score_add", description="Add points to a house or player.", **guild_kw)
@@ -126,8 +169,8 @@ def setup_commands(
             target_id = str(user.id)
         else:
             hk = (house or "").strip().lower()
-            if hk not in ("veridian", "feathered_host"):
-                await interaction.response.send_message("House must be `veridian` or `feathered_host`.", ephemeral=True)
+            if hk not in ("house_veridian", "feathered_host"):
+                await interaction.response.send_message("House must be `house_veridian` or `feathered_host`.")
                 return
             target = "house"
             target_id = hk
@@ -141,7 +184,25 @@ def setup_commands(
             reason=reason,
             weighted=weighted
         )
-        msg = f"Added **{points}** base points. House applied: **{house_award}**, Player applied: **{player_award}**."
+
+        if target == "player":
+            member = guild.get_member(int(target_id))
+            user_name = member.display_name if member else f"User {target_id}"
+            house_key = None
+            if member:
+                ids = config_mgr.get_house_role_ids()
+                vr_id = str(ids.get("house_veridian") or "").strip()
+                fh_id = str(ids.get("feathered_host") or "").strip()
+                if vr_id and any(r.id == int(vr_id) for r in member.roles):
+                    house_key = "house_veridian"
+                elif fh_id and any(r.id == int(fh_id) for r in member.roles):
+                    house_key = "feathered_host"
+            house_name = title_case_house(house_key) if house_key else "No House"
+            msg = f"Added **{points}** base points to **{user_name}** (**{house_name}**). House applied: **{house_award}**, Player applied: **{player_award}**."
+        else:
+            house_name = title_case_house(target_id)
+            msg = f"Added **{points}** base points to **{house_name}**. House applied: **{house_award}**."
+
         await interaction.response.send_message(msg)
 
     @tree.command(name="score_remove", description="Remove points from a house or player.", **guild_kw)
@@ -192,5 +253,23 @@ def setup_commands(
             reason=reason,
             weighted=weighted
         )
-        msg = f"Removed **{points}** base points. House applied: **{house_award}**, Player applied: **{player_award}**."
+
+        if target == "player":
+            member = guild.get_member(int(target_id))
+            user_name = member.display_name if member else f"User {target_id}"
+            house_key = None
+            if member:
+                ids = config_mgr.get_house_role_ids()
+                vr_id = str(ids.get("house_veridian") or "").strip()
+                fh_id = str(ids.get("feathered_host") or "").strip()
+                if vr_id and any(r.id == int(vr_id) for r in member.roles):
+                    house_key = "house_veridian"
+                elif fh_id and any(r.id == int(fh_id) for r in member.roles):
+                    house_key = "feathered_host"
+            house_name = title_case_house(house_key) if house_key else "No House"
+            msg = f"Removed **{points}** base points from **{user_name}** (**{house_name}**). House applied: **{house_award}**, Player applied: **{player_award}**."
+        else:
+            house_name = title_case_house(target_id)
+            msg = f"Removed **{points}** base points from **{house_name}**. House applied: **{house_award}**."
+
         await interaction.response.send_message(msg)

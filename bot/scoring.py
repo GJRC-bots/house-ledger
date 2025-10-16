@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 from datetime import datetime, timezone
 
 import discord
@@ -34,6 +34,11 @@ class ScoreManager:
 
     def get_player_total(self, user_id: int) -> int:
         return int(self._scores.get("players", {}).get(str(user_id), 0))
+
+    def get_top_players(self, limit: int = 10) -> List[Tuple[str, int]]:
+        players = self._scores.get("players", {})
+        sorted_players = sorted(players.items(), key=lambda kv: kv[1], reverse=True)
+        return sorted_players[:limit]
 
     #  Scoring Core
     async def add_points(
@@ -122,7 +127,7 @@ class ScoreManager:
 
     #  Internals 
     async def _apply_house_points(self, *, guild: discord.Guild, house_key: str, base_points: int, weighted: bool) -> int:
-        houses = self._scores.setdefault("houses", {"house_veridian": 0, "house_feathered_host": 0})
+        houses = self._scores.setdefault("houses", {"house_veridian": 0, "feathered_host": 0})
         if house_key not in houses:
             houses[house_key] = 0
 
@@ -131,7 +136,7 @@ class ScoreManager:
 
         if weighted and weighted_cfg.get("enabled", False):
             vr_count, fh_count = get_house_member_counts(guild=guild, house_role_ids=self._config_mgr.get_house_role_ids())
-            multiplier = compute_multiplier(house_key=house_key, house_veridian_count=vr_count, feathered_count=fh_count)
+            multiplier = compute_multiplier(house_key=house_key, veridian_count=vr_count, feathered_count=fh_count)
             rounding = weighted_cfg.get("rounding", "round")
             house_points = apply_rounding(base_points * multiplier, rounding)
 
