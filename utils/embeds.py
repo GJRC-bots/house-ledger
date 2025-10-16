@@ -174,7 +174,7 @@ def create_house_leaderboard_embed(guild: discord.Guild, houses: Dict[str, int],
 
     config = house_config.get(house_key, {})
     embed = discord.Embed(
-        title=f"🏠 {title_case_house(house_key).upper()}",
+        title=f"{title_case_house(house_key).upper()}",
         description=f"Elite champions of {title_case_house(house_key)}",
         color=config.get("color", 0x808080)
     )
@@ -244,5 +244,5 @@ def create_standings_embed(guild: discord.Guild, houses: Dict[str, int], top_pla
         if embed:
             embeds.append(embed)
             files.extend(f)
-    
+
     return embeds, files

@@ -10,6 +10,7 @@ from bot.config import ConfigManager
 from bot.scoring import ScoreManager
 from utils.helpers import is_admin_or_mod_check, embed_kv, title_case_house
 from utils.embeds import create_diag_embed, create_standings_embed, create_main_standings_embed, create_overall_leaderboard_embed, create_house_leaderboard_embed
+from utils.display import update_display_message
 
 def setup_commands(
     *,
@@ -135,6 +136,30 @@ def setup_commands(
         else:
             await interaction.response.send_message("Feathered Host data not available.", ephemeral=True)
 
+    @tree.command(name="set_display_channel", description="Set the channel for auto-updating scoreboard.", **guild_kw)
+    @is_admin_or_mod_check(config_mgr)
+    async def set_display_channel(interaction: discord.Interaction):
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message("Run this inside a server.", ephemeral=True)
+            return
+
+        houses = score_mgr.get_house_totals()
+        top_players = score_mgr.get_top_players(15)
+        embeds, files = create_standings_embed(guild, houses, top_players, config_mgr)
+
+        await interaction.response.send_message(embeds=embeds, files=files)
+        message = await interaction.original_response()
+
+        # Pin the message
+        try:
+            await message.pin()
+        except discord.Forbidden:
+            await interaction.followup.send("Couldn't pin the message (missing permissions).", ephemeral=True)
+
+        config_mgr.set_display_settings(str(interaction.channel_id), str(message.id))
+        await interaction.followup.send(f"Display channel set to {interaction.channel.mention}. The scoreboard will auto-update here.", ephemeral=True)
+
     #  Scoring
     @tree.command(name="score_add", description="Add points to a house or player.", **guild_kw)
     @is_admin_or_mod_check(config_mgr)
@@ -204,6 +229,7 @@ def setup_commands(
             msg = f"Added **{points}** base points to **{house_name}**. House applied: **{house_award}**."
 
         await interaction.response.send_message(msg)
+        await update_display_message(guild, config_mgr, score_mgr)
 
     @tree.command(name="score_remove", description="Remove points from a house or player.", **guild_kw)
     @is_admin_or_mod_check(config_mgr)
@@ -273,3 +299,4 @@ def setup_commands(
             msg = f"Removed **{points}** base points from **{house_name}**. House applied: **{house_award}**."
 
         await interaction.response.send_message(msg)
+        await update_display_message(guild, config_mgr, score_mgr)

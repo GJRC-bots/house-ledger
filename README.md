@@ -31,17 +31,34 @@ To edit manually, stop the bot, modify the JSON, and restart. Use `/config_weigh
 
 ### Command Reference
 
+#### Basic Commands
+
 | Command | Description |
 |---------|-------------|
 | `/ping` | Check if the bot is online. |
 | `/diag [show_members:true\|false]` | Show diagnostics (guild info, weighting, house roles, member counts, totals). |
+
+#### Configuration Commands
+
+| Command | Description |
+|---------|-------------|
 | `/config_weighting enabled:true\|false rounding:round\|floor\|ceil` | Enable/disable weighting and set rounding. (Admins/Mods) |
+| `/set_display_channel` | Set the channel for auto-updating scoreboard display. (Admins/Mods) |
+
+#### Standings Commands
+
+| Command | Description |
+|---------|-------------|
 | `/standings_house` | Display all standings embeds (main, overall, house-specific). |
 | `/standings_main` | Display main house standings with progress bars. |
 | `/standings_overall` | Display overall player leaderboard. |
 | `/standings_veridian` | Display House Veridian leaderboard. |
 | `/standings_feathered` | Display Feathered Host leaderboard. |
-| `/set_display_channel` | Set the channel for auto-updating scoreboard display. (Admins/Mods) |
+
+#### Scoring Commands
+
+| Command | Description |
+|---------|-------------|
 | `/score_add points reason [weighted:true\|false] [house:veridian\|feathered_host \| user:@user]` | Add points to a house or player. (Admins/Mods) |
 | `/score_remove points reason [weighted:true\|false] [house:veridian\|feathered_host \| user:@user]` | Remove points from a house or player. (Admins/Mods) |
 
@@ -54,3 +71,7 @@ To edit manually, stop the bot, modify the JSON, and restart. Use `/config_weigh
 ### Viewing Logs
 
 Audit logs are in `houseledger_scores.json` under the "events" array. Each entry includes timestamp, actor, target, points, etc. No console logs by default.
+
+### Auto-Updating Display
+
+Use `/set_display_channel` to set up a pinned scoreboard in a channel that updates automatically whenever scores change via `/score_add` or `/score_remove`. The display shows all standings embeds and refreshes in real-time.

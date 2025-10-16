@@ -18,6 +18,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "weighting": {
         "enabled": False,
         "rounding": "round"  # round | floor | ceil
+    },
+    "display": {
+        "channel_id": "",
+        "message_id": ""
     }
 }
 
@@ -44,3 +48,15 @@ class ConfigManager:
 
     def get_mod_role_id(self) -> str:
         return str(self._config.get("mod_role_id") or "").strip()
+
+    def get_display_channel_id(self) -> str:
+        return str(self._config.get("display", {}).get("channel_id") or "").strip()
+
+    def get_display_message_id(self) -> str:
+        return str(self._config.get("display", {}).get("message_id") or "").strip()
+
+    def set_display_settings(self, channel_id: str, message_id: str) -> None:
+        d = self._config.setdefault("display", {})
+        d["channel_id"] = channel_id
+        d["message_id"] = message_id
+        self.save()
