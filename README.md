@@ -9,6 +9,7 @@ Configuration is stored in `houseledger_config.json`. Default settings are creat
 - **House Roles**: Role IDs for "veridian" and "feathered_host" houses. Users with these roles are assigned to houses automatically.
 - **Channels**: Optional channel IDs for scoreboard, review_queue, and log (not currently used in commands).
 - **Weighting**: Enable/disable house-size weighting and set rounding mode.
+- **Display**: Channel ID and message ID for auto-updating scoreboard (set via `/set_display_channel`).
 
 To edit manually, stop the bot, modify the JSON, and restart. Use `/config_weighting` for weighting settings.
 
@@ -19,7 +20,12 @@ To edit manually, stop the bot, modify the JSON, and restart. Use `/config_weigh
 - **`/ping`**: Check if the bot is online. (Everyone)
 - **`/diag`**: Show diagnostics (guild info, weighting, house roles, member counts, totals). (Everyone; `show_members` defaults to true)
 - **`/config_weighting`**: Enable/disable weighting and set rounding (round/floor/ceil). (Admins/Mods)
-- **`/standings_house`**: Display house leaderboard sorted by points. (Everyone)
+- **`/standings_house`**: Display all standings embeds (main, overall, house-specific). (Everyone)
+- **`/standings_main`**: Display main house standings with progress bars. (Everyone)
+- **`/standings_overall`**: Display overall player leaderboard. (Everyone)
+- **`/standings_veridian`**: Display House Veridian leaderboard. (Everyone)
+- **`/standings_feathered`**: Display Feathered Host leaderboard. (Everyone)
+- **`/set_display_channel`**: Set the channel for auto-updating scoreboard display. (Admins/Mods)
 - **`/score_add`**: Add points to a house or player. Specify house (veridian/feathered_host), user, points, reason, and optional weighting. (Admins/Mods)
 - **`/score_remove`**: Remove points from a house or player. Same as add but subtracts. (Admins/Mods)
 
@@ -30,7 +36,12 @@ To edit manually, stop the bot, modify the JSON, and restart. Use `/config_weigh
 | `/ping` | Check if the bot is online. |
 | `/diag [show_members:true\|false]` | Show diagnostics (guild info, weighting, house roles, member counts, totals). |
 | `/config_weighting enabled:true\|false rounding:round\|floor\|ceil` | Enable/disable weighting and set rounding. (Admins/Mods) |
-| `/standings_house` | Display house leaderboard sorted by points. |
+| `/standings_house` | Display all standings embeds (main, overall, house-specific). |
+| `/standings_main` | Display main house standings with progress bars. |
+| `/standings_overall` | Display overall player leaderboard. |
+| `/standings_veridian` | Display House Veridian leaderboard. |
+| `/standings_feathered` | Display Feathered Host leaderboard. |
+| `/set_display_channel` | Set the channel for auto-updating scoreboard display. (Admins/Mods) |
 | `/score_add points reason [weighted:true\|false] [house:veridian\|feathered_host \| user:@user]` | Add points to a house or player. (Admins/Mods) |
 | `/score_remove points reason [weighted:true\|false] [house:veridian\|feathered_host \| user:@user]` | Remove points from a house or player. (Admins/Mods) |
 
