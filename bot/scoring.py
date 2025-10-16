@@ -10,7 +10,7 @@ from utils.weights import get_house_member_counts, compute_multiplier
 from utils.helpers import apply_rounding
 
 DEFAULT_SCORES: Dict[str, Any] = {
-    "houses": {"veridian": 0, "feathered_host": 0},
+    "houses": {"house_veridian": 0, "feathered_host": 0},
     "players": {},  # "user_id": total_points
     "events": []    # audit log of score changes
 }
@@ -131,7 +131,7 @@ class ScoreManager:
 
         if weighted and weighted_cfg.get("enabled", False):
             vr_count, fh_count = get_house_member_counts(guild=guild, house_role_ids=self._config_mgr.get_house_role_ids())
-            multiplier = compute_multiplier(house_key=house_key, veridian_count=vr_count, feathered_count=fh_count)
+            multiplier = compute_multiplier(house_key=house_key, house_veridian_count=vr_count, feathered_count=fh_count)
             rounding = weighted_cfg.get("rounding", "round")
             house_points = apply_rounding(base_points * multiplier, rounding)
 
@@ -142,10 +142,10 @@ class ScoreManager:
         if not member:
             return None
         ids = self._config_mgr.get_house_role_ids()
-        vr_id = str(ids.get("veridian") or "").strip()
+        vr_id = str(ids.get("house_veridian") or "").strip()
         fh_id = str(ids.get("feathered_host") or "").strip()
         if vr_id and any(r.id == int(vr_id) for r in member.roles):
-            return "veridian"
+            return "house_veridian"
         if fh_id and any(r.id == int(fh_id) for r in member.roles):
             return "feathered_host"
         return None

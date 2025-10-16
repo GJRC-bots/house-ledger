@@ -21,7 +21,7 @@ async def simulate():
         guild=mock_guild,
         actor_id=999,
         target="house",
-        target_id="veridian",
+        target_id="house_veridian",
         base_points=10,
         reason="offline test",
         weighted=True

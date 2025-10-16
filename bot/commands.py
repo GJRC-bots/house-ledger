@@ -38,7 +38,7 @@ def setup_commands(
         vr_count = fh_count = 0
         if show_members:
             house_ids = config_mgr.get_house_role_ids()
-            vr = guild.get_role(int(house_ids.get("veridian") or 0)) if house_ids.get("veridian") else None
+            vr = guild.get_role(int(house_ids.get("house_veridian") or 0)) if house_ids.get("house_veridian") else None
             fh = guild.get_role(int(house_ids.get("feathered_host") or 0)) if house_ids.get("feathered_host") else None
             vr_count = len(vr.members) if vr else 0
             fh_count = len(fh.members) if fh else 0
@@ -52,18 +52,13 @@ def setup_commands(
             "enabled": str(weighting.get("enabled", False)),
             "rounding": weighting.get("rounding", "round")
         }), inline=False)
-        house_ids = config_mgr.get_house_role_ids()
-        embed.add_field(name="House Roles", value=embed_kv({
-            "Veridian": house_ids.get("veridian") or "not set",
-            "Feathered Host": house_ids.get("feathered_host") or "not set"
-        }), inline=False)
         if show_members:
             embed.add_field(name="Member Counts", value=embed_kv({
-                "Veridian": vr_count,
+                "House Veridian": vr_count,
                 "Feathered Host": fh_count
             }), inline=False)
         embed.add_field(name="House Totals", value=embed_kv({
-            "Veridian": houses.get("veridian", 0),
+            "House Veridian": houses.get("house_veridian", 0),
             "Feathered Host": houses.get("feathered_host", 0)
         }), inline=False)
         embed.set_footer(text="All Offerings are recorded. Balance will be kept.")
@@ -101,7 +96,7 @@ def setup_commands(
     @tree.command(name="score_add", description="Add points to a house or player.", **guild_kw)
     @is_admin_or_mod_check(config_mgr)
     @app_commands.describe(
-        house="House to add points to (veridian/feathered_host) OR leave blank if you target a user.",
+        house="House to add points to (house_veridian/feathered_host) OR leave blank if you target a user.",
         user="Player to add points to",
         points="Points to add (integer).",
         reason="Reason (shown in audit log).",
@@ -182,8 +177,8 @@ def setup_commands(
             target_id = str(user.id)
         else:
             hk = (house or "").strip().lower()
-            if hk not in ("veridian", "feathered_host"):
-                await interaction.response.send_message("House must be `veridian` or `feathered_host`.", ephemeral=True)
+            if hk not in ("house_veridian", "feathered_host"):
+                await interaction.response.send_message("House must be `house_veridian` or `feathered_host`.", ephemeral=True)
                 return
             target = "house"
             target_id = hk

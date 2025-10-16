@@ -7,7 +7,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "guild_id": "",
     "mod_role_id": "",
     "house_roles": {
-        "veridian": "",
+        "house_veridian": "",
         "feathered_host": ""
     },
     "channels": {

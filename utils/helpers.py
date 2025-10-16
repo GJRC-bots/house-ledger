@@ -30,8 +30,8 @@ def embed_kv(d: Dict[str, Any]) -> str:
 def title_case_house(key: str) -> str:
     if key.lower() == "feathered_host":
         return "Feathered Host"
-    if key.lower() == "veridian":
-        return "Veridian"
+    if key.lower() == "house_veridian":
+        return "House Veridian"
     return key.title()
 
 def apply_rounding(value: float, mode: str) -> int:
