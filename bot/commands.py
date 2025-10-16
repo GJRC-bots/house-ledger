@@ -142,12 +142,12 @@ def setup_commands(
             weighted=weighted
         )
         msg = f"Added **{points}** base points. House applied: **{house_award}**, Player applied: **{player_award}**."
-        await interaction.response.send_message(msg, ephemeral=True)
+        await interaction.response.send_message(msg)
 
     @tree.command(name="score_remove", description="Remove points from a house or player.", **guild_kw)
     @is_admin_or_mod_check(config_mgr)
     @app_commands.describe(
-        house="House to remove points from (veridian/feathered_host) OR leave blank if you target a user.",
+        house="House to remove points from (house_veridian/feathered_host) OR leave blank if you target a user.",
         user="Player to remove points from",
         points="Points to remove (integer).",
         reason="Reason (shown in audit log).",
@@ -193,4 +193,4 @@ def setup_commands(
             weighted=weighted
         )
         msg = f"Removed **{points}** base points. House applied: **{house_award}**, Player applied: **{player_award}**."
-        await interaction.response.send_message(msg, ephemeral=True)
+        await interaction.response.send_message(msg)
