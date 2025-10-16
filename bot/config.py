@@ -1,0 +1,46 @@
+from __future__ import annotations
+from typing import Dict, Any
+
+from storage.base import StorageBase
+
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "guild_id": "",
+    "mod_role_id": "",
+    "house_roles": {
+        "veridian": "",
+        "feathered_host": ""
+    },
+    "channels": {
+        "scoreboard": "",
+        "review_queue": "",
+        "log": ""
+    },
+    "weighting": {
+        "enabled": False,
+        "rounding": "round"  # round | floor | ceil
+    }
+}
+
+class ConfigManager:
+    def __init__(self, storage: StorageBase):
+        self._storage = storage
+        self._config = self._storage.load_config(default_payload=DEFAULT_CONFIG)
+
+    @property
+    def data(self) -> Dict[str, Any]:
+        return self._config
+
+    def save(self) -> None:
+        self._storage.save_config(self._config)
+
+    def set_weighting(self, enabled: bool, rounding: str) -> None:
+        w = self._config.setdefault("weighting", {})
+        w["enabled"] = bool(enabled)
+        w["rounding"] = rounding
+        self.save()
+
+    def get_house_role_ids(self) -> Dict[str, str]:
+        return self._config.get("house_roles", {})
+
+    def get_mod_role_id(self) -> str:
+        return str(self._config.get("mod_role_id") or "").strip()
