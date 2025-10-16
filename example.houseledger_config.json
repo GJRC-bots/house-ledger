@@ -1,0 +1,17 @@
+{
+  "guild_id": "",
+  "mod_role_id": "",
+  "house_roles": {
+    "house_veridian": "",
+    "feathered_host": ""
+  },
+  "channels": {
+    "scoreboard": "",
+    "review_queue": "",
+    "log": ""
+  },
+  "weighting": {
+    "enabled": true,
+    "rounding": "round"
+  }
+}
