@@ -8,6 +8,7 @@ from discord.ext import commands
 
 from bot.config import ConfigManager
 from bot.scoring import ScoreManager
+from bot.seasons import SeasonManager
 from utils.helpers import is_admin_or_mod_check, embed_kv, title_case_house
 from utils.embeds import create_diag_embed, create_standings_embed, create_main_standings_embed, create_overall_leaderboard_embed, create_house_leaderboard_embed
 from utils.display import update_display_message
@@ -18,6 +19,7 @@ def setup_commands(
     bot: commands.Bot,
     config_mgr: ConfigManager,
     score_mgr: ScoreManager,
+    season_mgr: SeasonManager,
     dev_guild_id: Optional[str]
 ):
     guild_kw = {}
@@ -300,3 +302,104 @@ def setup_commands(
 
         await interaction.response.send_message(msg)
         await update_display_message(guild, config_mgr, score_mgr)
+
+    # Seasons
+    @tree.command(name="season", description="Show current season information.", **guild_kw)
+    async def season(interaction: discord.Interaction):
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message("Run this inside a server.", ephemeral=True)
+            return
+
+        season_stats = season_mgr.get_season_stats()
+        stage_stats = season_mgr.get_stage_stats()
+
+        embed = discord.Embed(
+            title=f"🏆 {season_stats['season_name']}",
+            color=0x3498db
+        )
+
+        embed.add_field(
+            name="📊 Season Stats",
+            value=f"**Total Submissions:** {season_stats['total_submissions']}\n"
+                  f"**Stages:** {season_stats['current_stage']}/{season_stats['total_stages']}",
+            inline=True
+        )
+
+        embed.add_field(
+            name="🎯 Current Stage",
+            value=f"**{stage_stats['stage_name']}**\n"
+                  f"**Submissions:** {stage_stats['total_submissions']}\n"
+                  f"**Correct:** {stage_stats['correct_submissions']}\n"
+                  f"**Has Solution:** {'✅' if stage_stats['has_solution'] else '❌'}",
+            inline=True
+        )
+
+        await interaction.response.send_message(embed=embed)
+
+    @tree.command(name="stage", description="Show current stage information.", **guild_kw)
+    async def stage(interaction: discord.Interaction):
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message("Run this inside a server.", ephemeral=True)
+            return
+
+        stage_stats = season_mgr.get_stage_stats()
+
+        embed = discord.Embed(
+            title=f"🎯 {stage_stats['stage_name']}",
+            color=0x2ecc71 if stage_stats['has_solution'] else 0xe74c3c
+        )
+
+        embed.add_field(
+            name="📈 Stats",
+            value=f"**Total Submissions:** {stage_stats['total_submissions']}\n"
+                  f"**Correct Answers:** {stage_stats['correct_submissions']}\n"
+                  f"**Completed:** {'✅' if stage_stats['completed'] else '❌'}",
+            inline=False
+        )
+
+        if stage_stats['has_solution']:
+            embed.add_field(
+                name="💡 Status",
+                value="Solution has been set. Submissions are being accepted!",
+                inline=False
+            )
+        else:
+            embed.add_field(
+                name="⏳ Status",
+                value="Waiting for solution to be set by admin.",
+                inline=False
+            )
+
+        await interaction.response.send_message(embed=embed)
+
+    @tree.command(name="submit", description="Submit an answer for the current stage.", **guild_kw)
+    @app_commands.describe(answer="Your answer for the current stage")
+    async def submit(interaction: discord.Interaction, answer: str):
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message("Run this inside a server.", ephemeral=True)
+            return
+
+        result = season_mgr.submit_answer(str(interaction.user.id), answer)
+        await interaction.response.send_message(result, ephemeral=True)
+
+    @tree.command(name="advance_season", description="Advance to the next season (Admin only).", **guild_kw)
+    @is_admin_or_mod_check(config_mgr)
+    async def advance_season(interaction: discord.Interaction):
+        result = season_mgr.advance_season()
+        await interaction.response.send_message(f"✅ {result}", ephemeral=True)
+
+    @tree.command(name="advance_stage", description="Advance to the next stage (Admin only).", **guild_kw)
+    @is_admin_or_mod_check(config_mgr)
+    async def advance_stage(interaction: discord.Interaction):
+        result = season_mgr.advance_stage()
+        await interaction.response.send_message(f"✅ {result}", ephemeral=True)
+
+    @tree.command(name="set_solution", description="Set the solution for the current stage (Admin only).", **guild_kw)
+    @is_admin_or_mod_check(config_mgr)
+    @app_commands.describe(solution="The correct answer for the current stage")
+    async def set_solution(interaction: discord.Interaction, solution: str):
+        result = season_mgr.set_stage_solution(solution)
+        await interaction.response.send_message(f"✅ {result}", ephemeral=True)
