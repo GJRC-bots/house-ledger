@@ -17,20 +17,6 @@ To edit manually, stop the bot, modify the JSON, and restart. Use `/config_weigh
 
 ### Commands
 
-- **`/ping`**: Check if the bot is online. (Everyone)
-- **`/diag`**: Show diagnostics (guild info, weighting, house roles, member counts, totals). (Everyone; `show_members` defaults to true)
-- **`/config_weighting`**: Enable/disable weighting and set rounding (round/floor/ceil). (Admins/Mods)
-- **`/standings_house`**: Display all standings embeds (main, overall, house-specific). (Everyone)
-- **`/standings_main`**: Display main house standings with progress bars. (Everyone)
-- **`/standings_overall`**: Display overall player leaderboard. (Everyone)
-- **`/standings_veridian`**: Display House Veridian leaderboard. (Everyone)
-- **`/standings_feathered`**: Display Feathered Host leaderboard. (Everyone)
-- **`/set_display_channel`**: Set the channel for auto-updating scoreboard display. (Admins/Mods)
-- **`/score_add`**: Add points to a house or player. Specify house (veridian/feathered_host), user, points, reason, and optional weighting. (Admins/Mods)
-- **`/score_remove`**: Remove points from a house or player. Same as add but subtracts. (Admins/Mods)
-
-### Command Reference
-
 #### Basic Commands
 
 | Command | Description |
@@ -62,6 +48,17 @@ To edit manually, stop the bot, modify the JSON, and restart. Use `/config_weigh
 | `/score_add points reason [weighted:true\|false] [house:veridian\|feathered_host \| user:@user]` | Add points to a house or player. (Admins/Mods) |
 | `/score_remove points reason [weighted:true\|false] [house:veridian\|feathered_host \| user:@user]` | Remove points from a house or player. (Admins/Mods) |
 
+#### Season Commands
+
+| Command | Description |
+|---------|-------------|
+| `/season` | Show current season information and stats. |
+| `/stage` | Show current stage information and submission stats. |
+| `/submit answer` | Submit an answer for the current stage. |
+| `/advance_season` | Advance to the next season. (Admins/Mods) |
+| `/advance_stage` | Advance to the next stage within the current season. (Admins/Mods) |
+| `/set_solution solution` | Set the correct answer for the current stage. (Admins/Mods) |
+
 ### Scoring Logic
 
 - Adding to a player: Adds base points to their score and (if they have a house role) weighted points to their house.
@@ -75,3 +72,14 @@ Audit logs are in `houseledger_scores.json` under the "events" array. Each entry
 ### Auto-Updating Display
 
 Use `/set_display_channel` to set up a pinned scoreboard in a channel that updates automatically whenever scores change via `/score_add` or `/score_remove`. The display shows all standings embeds and refreshes in real-time.
+
+### Season System
+
+The bot includes a season system for running competitive puzzle games or challenges. Each season contains multiple stages, and users can submit answers to each stage.
+
+- **Seasons**: Long-term competitions with multiple stages
+- **Stages**: Individual challenges within a season that users can submit answers to
+- **Submissions**: Users can submit one answer per stage; admins set the correct solution
+- **Progression**: Admins can advance seasons and stages as needed
+
+Season data is stored in `houseledger_season.json`. Use `/season` and `/stage` to view current progress, `/submit` to participate, and admin commands to manage the competition.
