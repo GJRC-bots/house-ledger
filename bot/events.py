@@ -14,7 +14,6 @@ def setup_events(bot: commands.Bot, tree: app_commands.CommandTree, dev_guild_id
                 await tree.sync(guild=target_guild)
             else:
                 await tree.sync()
+            print(f"[House Ledger] Logged in as {bot.user} | Commands synced")
         except Exception as e:
             print(f"[House Ledger] Command sync failed: {e}")
-        print(f"[House Ledger] Logged in as {bot.user} | Commands synced to "
-              f"{'guild ' + dev_guild_id if dev_guild_id else 'GLOBAL'}.")

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from storage.base import StorageBase
 
@@ -17,7 +17,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     },
     "weighting": {
         "enabled": False,
-        "rounding": "round"  # round | floor | ceil
+        "rounding": "round"
     },
     "display": {
         "channel_id": "",
@@ -43,8 +43,17 @@ class ConfigManager:
         w["rounding"] = rounding
         self.save()
 
-    def get_house_role_ids(self) -> Dict[str, str]:
-        return self._config.get("house_roles", {})
+    def get_house_role_ids(self) -> Dict[str, List[str]]:
+        roles = self._config.get("house_roles", {})
+        result = {}
+        for house, role_data in roles.items():
+            if isinstance(role_data, list):
+                result[house] = role_data
+            elif isinstance(role_data, str) and role_data.strip():
+                result[house] = [role_data.strip()]
+            else:
+                result[house] = []
+        return result
 
     def get_mod_role_id(self) -> str:
         return str(self._config.get("mod_role_id") or "").strip()
@@ -54,6 +63,9 @@ class ConfigManager:
 
     def get_display_message_id(self) -> str:
         return str(self._config.get("display", {}).get("message_id") or "").strip()
+
+    def get_log_channel_id(self) -> str:
+        return str(self._config.get("channels", {}).get("log") or "").strip()
 
     def set_display_settings(self, channel_id: str, message_id: str) -> None:
         d = self._config.setdefault("display", {})

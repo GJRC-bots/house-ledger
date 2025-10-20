@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from datetime import datetime
 
 from storage.base import StorageBase
@@ -98,73 +98,62 @@ class SeasonManager:
         self.save()
         return f"Set solution for {stage['name']}"
 
-    def submit_answer(self, user_id: str, answer: str) -> str:
-        """Submit an answer for the current stage."""
+    def submit_answer(self, user_id: str, answer: str) -> tuple[str, bool]:
+        """Submit an answer for the current stage.
+        
+        Returns: (message, was_correct)
+        """
         stage = self.get_current_stage()
         answer = answer.lower().strip()
         solution = stage.get("solution", "")
 
-        # Check if already submitted
-        submissions = stage.get("submissions", [])
-        existing = next((s for s in submissions if s["user_id"] == user_id), None)
+        if stage.get("completed", False):
+            return "This stage has already been solved! Wait for the next stage.", False
 
-        if existing:
-            return "You have already submitted an answer for this stage."
+        if not solution:
+            return "No solution has been set yet. Please wait for the moderators.", False
 
-        # Record submission
         submission = {
             "user_id": user_id,
             "answer": answer,
             "timestamp": datetime.now().isoformat(),
-            "correct": answer == solution if solution else False
+            "correct": answer == solution
         }
 
+        submissions = stage.get("submissions", [])
         submissions.append(submission)
         stage["submissions"] = submissions
 
-        # Update season total
         season = self.get_current_season()
         season["total_submissions"] = season.get("total_submissions", 0) + 1
 
+        was_correct = answer == solution
+        if was_correct:
+            stage["completed"] = True
+
         self.save()
 
-        if solution and answer == solution:
-            return "Correct! Well done."
-        elif solution:
-            return "Incorrect. Try again!"
+        if was_correct:
+            return "🎉 Correct! Well done. You've solved the stage!", True
         else:
-            return "Answer submitted. Solution not yet set."
+            return "❌ Incorrect. Try again!", False
 
     def get_season_stats(self) -> Dict[str, Any]:
         """Get stats for current season."""
         season = self.get_current_season()
         stages = season.get("stages", {})
 
-        stats = {
+        return {
             "season_name": season.get("name", "Unknown"),
             "total_submissions": season.get("total_submissions", 0),
             "current_stage": season.get("current_stage", 1),
-            "total_stages": len(stages),
-            "stages": []
+            "total_stages": len(stages)
         }
-
-        for stage_id, stage_data in stages.items():
-            stage_stats = {
-                "id": stage_id,
-                "name": stage_data.get("name", f"Stage {stage_id}"),
-                "submissions": len(stage_data.get("submissions", [])),
-                "completed": stage_data.get("completed", False),
-                "has_solution": bool(stage_data.get("solution"))
-            }
-            stats["stages"].append(stage_stats)
-
-        return stats
 
     def get_stage_stats(self) -> Dict[str, Any]:
         """Get detailed stats for current stage."""
         stage = self.get_current_stage()
         submissions = stage.get("submissions", [])
-
         correct_count = sum(1 for s in submissions if s.get("correct", False))
 
         return {

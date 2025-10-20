@@ -34,7 +34,6 @@ def create_diag_embed(
 
 def create_main_standings_embed(guild: discord.Guild, houses: Dict[str, int], config_mgr) -> Tuple[discord.Embed, List[discord.File]]:
     """Creates the main house standings embed with progress bars."""
-
     ordered_houses = sorted(houses.items(), key=lambda kv: kv[1], reverse=True)
     leading_house = ordered_houses[0][0] if ordered_houses else None
 
@@ -51,28 +50,23 @@ def create_main_standings_embed(guild: discord.Guild, houses: Dict[str, int], co
         color=color
     )
 
-    # Set winning house thumbnail
     if leading_house in house_config:
         file_path = os.path.join(os.getcwd(), "assets", f"{leading_house}.png")
         if os.path.exists(file_path):
             files.append(discord.File(file_path, filename=f"{leading_house}.png"))
             embed.set_thumbnail(url=f"attachment://{leading_house}.png")
 
-    # Calculate max points for progress bar scaling
     max_points = ordered_houses[0][1] if ordered_houses else 1
 
-    # House standings with progress bars
     standings_text = ""
     for i, (name, pts) in enumerate(ordered_houses):
         medal = ["🥇", "🥈", "🥉"][i] if i < 3 else f"#{i+1}"
         house_name = title_case_house(name)
 
-        # Create visual progress bar
         bar_length = 15
         filled = int((pts / max_points) * bar_length) if max_points > 0 else 0
         bar = "█" * filled + "░" * (bar_length - filled)
 
-        # Point gap indicator
         gap_text = ""
         if i > 0:
             gap = ordered_houses[i-1][1] - pts
@@ -82,9 +76,7 @@ def create_main_standings_embed(guild: discord.Guild, houses: Dict[str, int], co
         standings_text += f"┃ `{bar}` {pts} pts{gap_text}\n\n"
 
     embed.add_field(name="\u200B", value="\u200B", inline=False)
-
     embed.add_field(name="📊 HOUSE STANDINGS", value=standings_text, inline=False)
-
     embed.add_field(name="\u200B", value="\u200B", inline=False)
 
     total_points = sum(pts for _, pts in ordered_houses)
@@ -95,13 +87,11 @@ def create_main_standings_embed(guild: discord.Guild, houses: Dict[str, int], co
     )
 
     embed.add_field(name="\u200B", value="\u200B", inline=False)
-
     embed.set_footer(text="⚖️ Balance will be kept. Glory to the houses!")
     return embed, files
 
 def create_overall_leaderboard_embed(guild: discord.Guild, top_players: List[Tuple[str, int]], config_mgr) -> Tuple[discord.Embed, List[discord.File]]:
     """Creates the overall player leaderboard embed."""
-
     embed = discord.Embed(
         title="👥 TOP PLAYERS — OVERALL RANKINGS",
         description="The mightiest warriors across all houses",
@@ -112,35 +102,38 @@ def create_overall_leaderboard_embed(guild: discord.Guild, top_players: List[Tup
     for i, (user_id, pts) in enumerate(top_players[:15]):
         member = guild.get_member(int(user_id))
         name = member.display_name if member else f"User {user_id}"
-
         medal = ["🥇", "🥈", "🥉"][i] if i < 3 else f"#{i+1:2d}"
 
-        # Get house affiliation
         player_house = None
-        for house_key, role_id in config_mgr.get_house_role_ids().items():
-            role = guild.get_role(int(role_id)) if role_id else None
-            if role and member and role in member.roles:
-                player_house = house_key
+        role_ids = config_mgr.get_house_role_ids()
+        for house_key, role_id_list in role_ids.items():
+            for role_id in role_id_list:
+                if role_id and role_id.isdigit():
+                    role = guild.get_role(int(role_id))
+                    if role and member and role in member.roles:
+                        player_house = house_key
+                        break
+            if player_house:
                 break
 
-        # Determine if player is top of their house
         leader_marker = ""
         if player_house:
             house_members = set()
-            for hk, rid in config_mgr.get_house_role_ids().items():
+            role_ids = config_mgr.get_house_role_ids()
+            for hk, rid_list in role_ids.items():
                 if hk == player_house:
-                    role = guild.get_role(int(rid)) if rid else None
-                    if role:
-                        house_members = set(str(m.id) for m in role.members)
+                    for rid in rid_list:
+                        if rid and rid.isdigit():
+                            role = guild.get_role(int(rid))
+                            if role:
+                                house_members.update(str(m.id) for m in role.members)
                     break
             if house_members:
                 house_scores = [p for uid, p in top_players if uid in house_members]
                 if house_scores and pts == max(house_scores):
                     leader_marker = "👑"
 
-        # Get house name with bracket notation
         house_display = f"[{title_case_house(player_house)}]" if player_house else "[No House]"
-
         player_text += f"{medal} **{name}** {house_display} • {pts} pts {leader_marker}\n"
 
     embed.add_field(name="\u200B", value="\u200B", inline=False)
@@ -151,21 +144,23 @@ def create_overall_leaderboard_embed(guild: discord.Guild, top_players: List[Tup
 
 def create_house_leaderboard_embed(guild: discord.Guild, houses: Dict[str, int], top_players: List[Tuple[str, int]], config_mgr, house_key: str) -> Tuple[discord.Embed, List[discord.File]]:
     """Creates a house-specific leaderboard embed."""
-
     house_roles = config_mgr.get_house_role_ids()
-    role_id = house_roles.get(house_key)
-    if not role_id:
+    role_id_list = house_roles.get(house_key, [])
+    if not role_id_list:
         return None, []
 
-    role = guild.get_role(int(role_id))
-    if not role:
+    house_members = set()
+    for role_id in role_id_list:
+        if role_id and role_id.isdigit():
+            role = guild.get_role(int(role_id))
+            if role:
+                house_members.update(str(m.id) for m in role.members)
+    
+    if not house_members:
         return None, []
-
-    house_members = set(str(m.id) for m in role.members)
+    
     house_top = [(uid, pts) for uid, pts in top_players if uid in house_members][:12]
-
-    if not house_top:
-        return None, []
+    active_participants = len(house_top) if house_top else 0
 
     house_config = {
         "house_veridian": {"color": 0x00FF00},
@@ -180,41 +175,39 @@ def create_house_leaderboard_embed(guild: discord.Guild, houses: Dict[str, int],
     )
 
     files = []
-    # Add house PNG as thumbnail
     file_path = os.path.join(os.getcwd(), "assets", f"{house_key}.png")
     if os.path.exists(file_path):
         filename = f"{house_key}_house.png"
         files.append(discord.File(file_path, filename=filename))
         embed.set_thumbnail(url=f"attachment://{filename}")
 
-    house_text = ""
-    for i, (user_id, pts) in enumerate(house_top):
-        member = guild.get_member(int(user_id))
-        name = member.display_name if member else f"User {user_id}"
-        medal = ["🥇", "🥈", "🥉"][i] if i < 3 else f"#{i+1:2d}"
+    if house_top:
+        house_text = ""
+        for i, (user_id, pts) in enumerate(house_top):
+            member = guild.get_member(int(user_id))
+            name = member.display_name if member else f"User {user_id}"
+            medal = ["🥇", "🥈", "🥉"][i] if i < 3 else f"#{i+1:2d}"
 
-        # Percentage of house's top player
-        if i == 0:
-            pct_text = "HOUSE CHAMPION"
-        else:
-            pct = (pts / house_top[0][1] * 100) if house_top[0][1] > 0 else 0
-            pct_text = f"{pct:.0f}% of leader"
+            if i == 0:
+                pct_text = "HOUSE CHAMPION"
+            else:
+                pct = (pts / house_top[0][1] * 100) if house_top[0][1] > 0 else 0
+                pct_text = f"{pct:.0f}% of leader"
 
-        house_text += f"{medal} **{name}** • {pts} pts ({pct_text})\n"
+            house_text += f"{medal} **{name}** • {pts} pts ({pct_text})\n"
 
+        embed.add_field(name="\u200B", value="\u200B", inline=False)
+        embed.add_field(name="🎯 TOP PERFORMERS", value=house_text, inline=False)
+        embed.add_field(name="\u200B", value="\u200B", inline=False)
+    else:
+        embed.add_field(name="\u200B", value="\u200B", inline=False)
+        embed.add_field(name="🎯 TOP PERFORMERS", value="*No active participants yet*\n\n*The house awaits its champions...*", inline=False)
+        embed.add_field(name="\u200B", value="\u200B", inline=False)
+
+    embed.add_field(name="👥 HOUSE MEMBERS", value=f"{len(house_members)} total members", inline=True)
+    embed.add_field(name="🎮 ACTIVE PARTICIPANTS", value=f"{active_participants} with points", inline=True)
     embed.add_field(name="\u200B", value="\u200B", inline=False)
-    embed.add_field(name="🎯 TOP PERFORMERS", value=house_text, inline=False)
-    embed.add_field(name="\u200B", value="\u200B", inline=False)
-    embed.add_field(
-        name="👥 HOUSE MEMBERS",
-        value=f"{len(house_members)} total members",
-        inline=True
-    )
-    embed.add_field(
-        name="⭐ HOUSE TOTAL",
-        value=f"{houses.get(house_key, 0)} pts",
-        inline=True
-    )
+    embed.add_field(name="⭐ HOUSE TOTAL", value=f"{houses.get(house_key, 0)} pts", inline=True)
     embed.add_field(name="\u200B", value="\u200B", inline=False)
 
     ordered_houses = sorted(houses.items(), key=lambda kv: kv[1], reverse=True)
@@ -223,22 +216,18 @@ def create_house_leaderboard_embed(guild: discord.Guild, houses: Dict[str, int],
     return embed, files
 
 def create_standings_embed(guild: discord.Guild, houses: Dict[str, int], top_players: List[Tuple[str, int]], config_mgr) -> Tuple[List[discord.Embed], List[discord.File]]:
-    """Creates an epic multi-embed scoreboard system with visual progress bars and house-specific leaderboards."""
-
+    """Creates multi-embed scoreboard system with progress bars and house leaderboards."""
     embeds = []
     files = []
 
-    # Main standings
     embed, f = create_main_standings_embed(guild, houses, config_mgr)
     embeds.append(embed)
     files.extend(f)
 
-    # Overall leaderboard
     embed, f = create_overall_leaderboard_embed(guild, top_players, config_mgr)
     embeds.append(embed)
     files.extend(f)
 
-    # House-specific
     for house_key in ["house_veridian", "feathered_host"]:
         embed, f = create_house_leaderboard_embed(guild, houses, top_players, config_mgr, house_key)
         if embed:

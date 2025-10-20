@@ -1,5 +1,4 @@
 from __future__ import annotations
-from importlib.metadata import files
 from typing import Optional
 
 import discord
@@ -9,7 +8,7 @@ from discord.ext import commands
 from bot.config import ConfigManager
 from bot.scoring import ScoreManager
 from bot.seasons import SeasonManager
-from utils.helpers import is_admin_or_mod_check, embed_kv, title_case_house
+from utils.helpers import is_admin_or_mod_check, title_case_house
 from utils.embeds import create_diag_embed, create_standings_embed, create_main_standings_embed, create_overall_leaderboard_embed, create_house_leaderboard_embed
 from utils.display import update_display_message
 
@@ -82,7 +81,7 @@ def setup_commands(
             return
 
         houses = score_mgr.get_house_totals()
-        top_players = score_mgr.get_top_players(10)
+        top_players = score_mgr.get_top_players(50)
         embeds, files = create_standings_embed(guild, houses, top_players, config_mgr)
         await interaction.response.send_message(embeds=embeds, files=files)
 
@@ -217,13 +216,19 @@ def setup_commands(
             user_name = member.display_name if member else f"User {target_id}"
             house_key = None
             if member:
-                ids = config_mgr.get_house_role_ids()
-                vr_id = str(ids.get("house_veridian") or "").strip()
-                fh_id = str(ids.get("feathered_host") or "").strip()
-                if vr_id and any(r.id == int(vr_id) for r in member.roles):
-                    house_key = "house_veridian"
-                elif fh_id and any(r.id == int(fh_id) for r in member.roles):
-                    house_key = "feathered_host"
+                role_ids = config_mgr.get_house_role_ids()
+                for house, role_id_list in role_ids.items():
+                    for role_id in role_id_list:
+                        if role_id and role_id.isdigit():
+                            try:
+                                role = guild.get_role(int(role_id))
+                                if role and role in member.roles:
+                                    house_key = house
+                                    break
+                            except ValueError:
+                                continue
+                    if house_key:
+                        break
             house_name = title_case_house(house_key) if house_key else "No House"
             msg = f"Added **{points}** base points to **{user_name}** (**{house_name}**). House applied: **{house_award}**, Player applied: **{player_award}**."
         else:
@@ -287,13 +292,19 @@ def setup_commands(
             user_name = member.display_name if member else f"User {target_id}"
             house_key = None
             if member:
-                ids = config_mgr.get_house_role_ids()
-                vr_id = str(ids.get("house_veridian") or "").strip()
-                fh_id = str(ids.get("feathered_host") or "").strip()
-                if vr_id and any(r.id == int(vr_id) for r in member.roles):
-                    house_key = "house_veridian"
-                elif fh_id and any(r.id == int(fh_id) for r in member.roles):
-                    house_key = "feathered_host"
+                role_ids = config_mgr.get_house_role_ids()
+                for house, role_id_list in role_ids.items():
+                    for role_id in role_id_list:
+                        if role_id and role_id.isdigit():
+                            try:
+                                role = guild.get_role(int(role_id))
+                                if role and role in member.roles:
+                                    house_key = house
+                                    break
+                            except ValueError:
+                                continue
+                    if house_key:
+                        break
             house_name = title_case_house(house_key) if house_key else "No House"
             msg = f"Removed **{points}** base points from **{user_name}** (**{house_name}**). House applied: **{house_award}**, Player applied: **{player_award}**."
         else:
@@ -355,16 +366,23 @@ def setup_commands(
             name="📈 Stats",
             value=f"**Total Submissions:** {stage_stats['total_submissions']}\n"
                   f"**Correct Answers:** {stage_stats['correct_submissions']}\n"
-                  f"**Completed:** {'✅' if stage_stats['completed'] else '❌'}",
+                  f"**Solved:** {'✅' if stage_stats['completed'] else '❌'}",
             inline=False
         )
 
         if stage_stats['has_solution']:
-            embed.add_field(
-                name="💡 Status",
-                value="Solution has been set. Submissions are being accepted!",
-                inline=False
-            )
+            if stage_stats['completed']:
+                embed.add_field(
+                    name="✅ Status",
+                    value="Stage has been solved! Submissions are closed.",
+                    inline=False
+                )
+            else:
+                embed.add_field(
+                    name="💡 Status",
+                    value="Solution has been set. Submissions are being accepted!",
+                    inline=False
+                )
         else:
             embed.add_field(
                 name="⏳ Status",
@@ -382,7 +400,56 @@ def setup_commands(
             await interaction.response.send_message("Run this inside a server.", ephemeral=True)
             return
 
-        result = season_mgr.submit_answer(str(interaction.user.id), answer)
+        result, was_correct = season_mgr.submit_answer(str(interaction.user.id), answer)
+        
+        if was_correct:
+            await score_mgr.add_points(
+                guild=guild,
+                actor_id=interaction.user.id,
+                target="player",
+                target_id=str(interaction.user.id),
+                base_points=10,
+                reason=f"Solved {season_mgr.get_current_stage().get('name', 'Stage')}",
+                weighted=True
+            )
+        
+        log_channel_id = config_mgr.get_log_channel_id()
+        if log_channel_id and was_correct:
+            try:
+                log_channel = guild.get_channel(int(log_channel_id))
+                if log_channel:
+                    member = guild.get_member(interaction.user.id)
+                    user_name = member.display_name if member else f"User {interaction.user.id}"
+                    
+                    house_name = "No House"
+                    if member:
+                        role_ids = config_mgr.get_house_role_ids()
+                        for house_key, role_id_list in role_ids.items():
+                            for role_id in role_id_list:
+                                if role_id and role_id.isdigit():
+                                    role = guild.get_role(int(role_id))
+                                    if role and role in member.roles:
+                                        house_name = title_case_house(house_key)
+                                        break
+                            if house_name != "No House":
+                                break
+                    
+                    stage_name = season_mgr.get_current_stage().get('name', 'Unknown Stage')
+                    embed = discord.Embed(
+                        title="🎉 Stage Solved!",
+                        description=f"**{user_name}** from **{house_name}** has solved **{stage_name}**!",
+                        color=0x27ae60,
+                        timestamp=interaction.created_at
+                    )
+                    embed.add_field(name="Points Awarded", value="10 points (weighted)", inline=False)
+                    
+                    await log_channel.send(embed=embed)
+            except Exception:
+                pass
+        
+        if was_correct:
+            await update_display_message(guild, config_mgr, score_mgr)
+        
         await interaction.response.send_message(result, ephemeral=True)
 
     @tree.command(name="advance_season", description="Advance to the next season (Admin only).", **guild_kw)

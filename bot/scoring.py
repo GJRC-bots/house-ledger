@@ -11,8 +11,8 @@ from utils.helpers import apply_rounding
 
 DEFAULT_SCORES: Dict[str, Any] = {
     "houses": {"house_veridian": 0, "feathered_host": 0},
-    "players": {},  # "user_id": total_points
-    "events": []    # audit log of score changes
+    "players": {},
+    "events": []
 }
 
 class ScoreManager:
@@ -28,7 +28,6 @@ class ScoreManager:
     def save(self) -> None:
         self._storage.save_scores(self._scores)
 
-    #  House/Player Totals
     def get_house_totals(self) -> Dict[str, int]:
         return dict(self._scores.get("houses", {}))
 
@@ -40,14 +39,13 @@ class ScoreManager:
         sorted_players = sorted(players.items(), key=lambda kv: kv[1], reverse=True)
         return sorted_players[:limit]
 
-    #  Scoring Core
     async def add_points(
         self,
         *,
         guild: discord.Guild,
         actor_id: int,
-        target: str,            # "house" or "player"
-        target_id: str,         # house key ("house_veridian"/"feathered_host") or user id string
+        target: str,
+        target_id: str,
         base_points: int,
         reason: str,
         weighted: bool
@@ -58,14 +56,12 @@ class ScoreManager:
         player_pts_awarded = 0
         house_pts_awarded = 0
 
-        # Player points always add base_points if target is a player
         if target == "player":
             players = self._scores.setdefault("players", {})
             players.setdefault(target_id, 0)
             players[target_id] += base_points
             player_pts_awarded = base_points
 
-            # Player's house
             member = guild.get_member(int(target_id))
             house_key = self._infer_member_house(member)
             if house_key:
@@ -87,7 +83,6 @@ class ScoreManager:
         else:
             raise ValueError("target must be 'house' or 'player'")
 
-        # Audit log
         self._log_event(
             actor_id=actor_id,
             target=target,
@@ -113,7 +108,6 @@ class ScoreManager:
         reason: str,
         weighted: bool
     ) -> Tuple[int, int]:
-        # Subtract
         neg_points = -abs(base_points)
         return await self.add_points(
             guild=guild,
@@ -125,7 +119,6 @@ class ScoreManager:
             weighted=weighted
         )
 
-    #  Internals 
     async def _apply_house_points(self, *, guild: discord.Guild, house_key: str, base_points: int, weighted: bool) -> int:
         houses = self._scores.setdefault("houses", {"house_veridian": 0, "feathered_host": 0})
         if house_key not in houses:
@@ -146,13 +139,26 @@ class ScoreManager:
     def _infer_member_house(self, member: Optional[discord.Member]) -> Optional[str]:
         if not member:
             return None
-        ids = self._config_mgr.get_house_role_ids()
-        vr_id = str(ids.get("house_veridian") or "").strip()
-        fh_id = str(ids.get("feathered_host") or "").strip()
-        if vr_id and any(r.id == int(vr_id) for r in member.roles):
-            return "house_veridian"
-        if fh_id and any(r.id == int(fh_id) for r in member.roles):
-            return "feathered_host"
+        role_ids = self._config_mgr.get_house_role_ids()
+        vr_ids = role_ids.get("house_veridian", [])
+        fh_ids = role_ids.get("feathered_host", [])
+        
+        for vr_id in vr_ids:
+            if vr_id and vr_id.isdigit():
+                try:
+                    if any(r.id == int(vr_id) for r in member.roles):
+                        return "house_veridian"
+                except ValueError:
+                    continue
+        
+        for fh_id in fh_ids:
+            if fh_id and fh_id.isdigit():
+                try:
+                    if any(r.id == int(fh_id) for r in member.roles):
+                        return "feathered_host"
+                except ValueError:
+                    continue
+        
         return None
 
     def _log_event(

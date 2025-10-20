@@ -17,6 +17,7 @@ async def update_display_message(guild: discord.Guild, config_mgr: ConfigManager
 
     if not channel_id or not message_id:
         return
+    
     try:
         channel = guild.get_channel(int(channel_id))
         if not channel or not isinstance(channel, discord.TextChannel):
@@ -26,8 +27,8 @@ async def update_display_message(guild: discord.Guild, config_mgr: ConfigManager
         houses = score_mgr.get_house_totals()
         top_players = score_mgr.get_top_players(15)
         embeds, files = create_standings_embed(guild, houses, top_players, config_mgr)
+        
         await message.edit(embeds=embeds, attachments=files)
 
-    except (discord.NotFound, discord.Forbidden, ValueError):
-        # Message deleted or inaccessible; silence bitch
+    except (discord.NotFound, discord.Forbidden, ValueError, Exception):
         pass
