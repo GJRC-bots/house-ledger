@@ -38,8 +38,8 @@ def create_main_standings_embed(guild: discord.Guild, houses: Dict[str, int], co
     leading_house = ordered_houses[0][0] if ordered_houses else None
 
     house_config = {
-        "house_veridian": {"color": 0x00FF00},
-        "feathered_host": {"color": 0xFFD700},
+        "house_veridian": {"color": 0x00FF88, "emoji": "⚔️"},
+        "feathered_host": {"color": 0xFFD700, "emoji": "🪶"},
     }
 
     files = []
@@ -47,7 +47,8 @@ def create_main_standings_embed(guild: discord.Guild, houses: Dict[str, int], co
     embed = discord.Embed(
         title="🏆 HOUSE LEDGER — SCOREBOARD 🏆",
         description="*The grand standings of glory and honor*",
-        color=color
+        color=color,
+        timestamp=discord.utils.utcnow()
     )
 
     if leading_house in house_config:
@@ -58,25 +59,30 @@ def create_main_standings_embed(guild: discord.Guild, houses: Dict[str, int], co
 
     max_points = ordered_houses[0][1] if ordered_houses else 1
 
+    # Add spacing
+    embed.add_field(name="\u200B", value="\u200B", inline=False)
+
     standings_text = ""
     for i, (name, pts) in enumerate(ordered_houses):
         medal = ["🥇", "🥈", "🥉"][i] if i < 3 else f"#{i+1}"
         house_name = title_case_house(name)
+        house_emoji = house_config.get(name, {}).get("emoji", "🏠")
 
-        bar_length = 15
+        bar_length = 20
         filled = int((pts / max_points) * bar_length) if max_points > 0 else 0
         bar = "█" * filled + "░" * (bar_length - filled)
 
         gap_text = ""
         if i > 0:
             gap = ordered_houses[i-1][1] - pts
-            gap_text = f" (−{gap})"
+            gap_text = f" *(−{gap} behind)*"
 
-        standings_text += f"{medal} **{house_name}**\n"
-        standings_text += f"┃ `{bar}` {pts} pts{gap_text}\n\n"
+        standings_text += f"{medal} **{house_emoji} {house_name}**\n"
+        standings_text += f"    `{bar}` **{pts}** pts{gap_text}\n\n"
 
-    embed.add_field(name="\u200B", value="\u200B", inline=False)
-    embed.add_field(name="📊 HOUSE STANDINGS", value=standings_text, inline=False)
+    embed.add_field(name="✦ HOUSE STANDINGS ✦", value=standings_text, inline=False)
+    
+    # Add spacing
     embed.add_field(name="\u200B", value="\u200B", inline=False)
 
     total_points = sum(pts for _, pts in ordered_houses)
@@ -86,17 +92,23 @@ def create_main_standings_embed(guild: discord.Guild, houses: Dict[str, int], co
         inline=False
     )
 
+    # Add spacing
     embed.add_field(name="\u200B", value="\u200B", inline=False)
+    
     embed.set_footer(text="⚖️ Balance will be kept. Glory to the houses!")
     return embed, files
 
 def create_overall_leaderboard_embed(guild: discord.Guild, top_players: List[Tuple[str, int]], config_mgr) -> Tuple[discord.Embed, List[discord.File]]:
     """Creates the overall player leaderboard embed."""
     embed = discord.Embed(
-        title="👥 TOP PLAYERS — OVERALL RANKINGS",
-        description="The mightiest warriors across all houses",
-        color=0x0080FF
+        title="👥 TOP PLAYERS — OVERALL RANKINGS 👥",
+        description="*The mightiest warriors across all houses*",
+        color=0x9D84FF,
+        timestamp=discord.utils.utcnow()
     )
+
+    # Add spacing
+    embed.add_field(name="\u200B", value="\u200B", inline=False)
 
     player_text = ""
     for i, (user_id, pts) in enumerate(top_players[:15]):
@@ -131,15 +143,18 @@ def create_overall_leaderboard_embed(guild: discord.Guild, top_players: List[Tup
             if house_members:
                 house_scores = [p for uid, p in top_players if uid in house_members]
                 if house_scores and pts == max(house_scores):
-                    leader_marker = "👑"
+                    leader_marker = " 👑"
 
-        house_display = f"[{title_case_house(player_house)}]" if player_house else "[No House]"
-        player_text += f"{medal} **{name}** {house_display} • {pts} pts {leader_marker}\n"
+        house_emoji = "⚔️" if player_house == "house_veridian" else "🪶" if player_house == "feathered_host" else "🏠"
+        house_display = f"{house_emoji} *{title_case_house(player_house)}*" if player_house else "*[No House]*"
+        player_text += f"{medal} **{name}** {house_display}\n    ➤ **{pts}** pts{leader_marker}\n"
 
+    embed.add_field(name="✦ ELITE COMPETITORS ✦", value=player_text, inline=False)
+    
+    # Add spacing
     embed.add_field(name="\u200B", value="\u200B", inline=False)
-    embed.add_field(name="🎖️ ELITE COMPETITORS", value=player_text, inline=False)
-    embed.add_field(name="\u200B", value="\u200B", inline=False)
-    embed.set_footer(text="Ranked by total points across all activities")
+    
+    embed.set_footer(text="⚖️ Ranked by total points across all activities")
     return embed, []
 
 def create_house_leaderboard_embed(guild: discord.Guild, houses: Dict[str, int], top_players: List[Tuple[str, int]], config_mgr, house_key: str) -> Tuple[discord.Embed, List[discord.File]]:
@@ -163,15 +178,19 @@ def create_house_leaderboard_embed(guild: discord.Guild, houses: Dict[str, int],
     active_participants = len(house_top) if house_top else 0
 
     house_config = {
-        "house_veridian": {"color": 0x00FF00},
-        "feathered_host": {"color": 0xFFD700},
+        "house_veridian": {"color": 0x00FF88, "emoji": "⚔️", "accent": "✦"},
+        "feathered_host": {"color": 0xFFD700, "emoji": "🪶", "accent": "✧"},
     }
 
     config = house_config.get(house_key, {})
+    house_emoji = config.get("emoji", "🏠")
+    house_accent = config.get("accent", "✦")
+    
     embed = discord.Embed(
-        title=f"{title_case_house(house_key).upper()}",
-        description=f"Elite champions of {title_case_house(house_key)}",
-        color=config.get("color", 0x808080)
+        title=f"{house_emoji} {title_case_house(house_key).upper()} {house_emoji}",
+        description=f"*Elite champions of {title_case_house(house_key)}*",
+        color=config.get("color", 0x808080),
+        timestamp=discord.utils.utcnow()
     )
 
     files = []
@@ -181,6 +200,9 @@ def create_house_leaderboard_embed(guild: discord.Guild, houses: Dict[str, int],
         files.append(discord.File(file_path, filename=filename))
         embed.set_thumbnail(url=f"attachment://{filename}")
 
+    # Add spacing
+    embed.add_field(name="\u200B", value="\u200B", inline=False)
+
     if house_top:
         house_text = ""
         for i, (user_id, pts) in enumerate(house_top):
@@ -189,30 +211,43 @@ def create_house_leaderboard_embed(guild: discord.Guild, houses: Dict[str, int],
             medal = ["🥇", "🥈", "🥉"][i] if i < 3 else f"#{i+1:2d}"
 
             if i == 0:
-                pct_text = "HOUSE CHAMPION"
+                crown = " 👑"
+                pct_text = "*HOUSE CHAMPION*"
             else:
+                crown = ""
                 pct = (pts / house_top[0][1] * 100) if house_top[0][1] > 0 else 0
-                pct_text = f"{pct:.0f}% of leader"
+                pct_text = f"*{pct:.0f}% of leader*"
 
-            house_text += f"{medal} **{name}** • {pts} pts ({pct_text})\n"
+            house_text += f"{medal} **{name}**{crown}\n    ➤ **{pts}** pts • {pct_text}\n"
 
-        embed.add_field(name="\u200B", value="\u200B", inline=False)
-        embed.add_field(name="🎯 TOP PERFORMERS", value=house_text, inline=False)
-        embed.add_field(name="\u200B", value="\u200B", inline=False)
+        embed.add_field(name=f"{house_accent} TOP PERFORMERS {house_accent}", value=house_text, inline=False)
     else:
-        embed.add_field(name="\u200B", value="\u200B", inline=False)
-        embed.add_field(name="🎯 TOP PERFORMERS", value="*No active participants yet*\n\n*The house awaits its champions...*", inline=False)
-        embed.add_field(name="\u200B", value="\u200B", inline=False)
-
-    embed.add_field(name="👥 HOUSE MEMBERS", value=f"{len(house_members)} total members", inline=True)
-    embed.add_field(name="🎮 ACTIVE PARTICIPANTS", value=f"{active_participants} with points", inline=True)
+        embed.add_field(
+            name=f"{house_accent} TOP PERFORMERS {house_accent}", 
+            value="*No active participants yet*\n\n*The house awaits its champions...*", 
+            inline=False
+        )
+    
+    # Add spacing
     embed.add_field(name="\u200B", value="\u200B", inline=False)
-    embed.add_field(name="⭐ HOUSE TOTAL", value=f"{houses.get(house_key, 0)} pts", inline=True)
-    embed.add_field(name="\u200B", value="\u200B", inline=False)
 
+    embed.add_field(name="👥 HOUSE MEMBERS", value=f"**{len(house_members)}** total", inline=True)
+    embed.add_field(name="🎮 ACTIVE PARTICIPANTS", value=f"**{active_participants}** scoring", inline=True)
+    
+    # Add spacing
+    embed.add_field(name="\u200B", value="\u200B", inline=False)
+    
+    embed.add_field(name="⭐ HOUSE TOTAL", value=f"**{houses.get(house_key, 0)}** pts", inline=True)
+    
     ordered_houses = sorted(houses.items(), key=lambda kv: kv[1], reverse=True)
     standing = [h[0] for h in ordered_houses].index(house_key) + 1 if house_key in [h[0] for h in ordered_houses] else "?"
-    embed.set_footer(text=f"House standing: {standing}/{len(ordered_houses)}")
+    standing_emoji = ["🥇", "🥈"][standing-1] if standing <= 2 else f"#{standing}"
+    embed.add_field(name="🏆 HOUSE STANDING", value=f"**{standing_emoji}** of {len(ordered_houses)}", inline=True)
+    
+    # Add spacing
+    embed.add_field(name="\u200B", value="\u200B", inline=False)
+    
+    embed.set_footer(text=f"⚖️ House standing: {standing}/{len(ordered_houses)}")
     return embed, files
 
 def create_standings_embed(guild: discord.Guild, houses: Dict[str, int], top_players: List[Tuple[str, int]], config_mgr) -> Tuple[List[discord.Embed], List[discord.File]]:
