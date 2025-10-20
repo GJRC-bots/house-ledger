@@ -8,9 +8,11 @@ from discord.ext import commands
 from bot.config import ConfigManager
 from bot.scoring import ScoreManager
 from bot.seasons import SeasonManager
+from bot.puzzles import PuzzleManager
 from utils.helpers import is_admin_or_mod_check, title_case_house
 from utils.embeds import create_diag_embed, create_standings_embed, create_main_standings_embed, create_overall_leaderboard_embed, create_house_leaderboard_embed
 from utils.display import update_display_message
+from utils.puzzle_embeds import create_puzzle_embed, create_puzzle_list_embed, create_puzzle_activated_embed
 
 def setup_commands(
     *,
@@ -19,6 +21,7 @@ def setup_commands(
     config_mgr: ConfigManager,
     score_mgr: ScoreManager,
     season_mgr: SeasonManager,
+    puzzle_mgr: PuzzleManager,
     dev_guild_id: Optional[str]
 ):
     guild_kw = {}
@@ -478,3 +481,61 @@ def setup_commands(
     async def set_solution(interaction: discord.Interaction, solution: str, points: int = 10):
         result = season_mgr.set_stage_solution(solution, points)
         await interaction.response.send_message(f"✅ {result}", ephemeral=True)
+
+    # Puzzle Commands
+    @tree.command(name="puzzle_list", description="List all available puzzles.", **guild_kw)
+    async def puzzle_list(interaction: discord.Interaction):
+        puzzles = puzzle_mgr.get_all_puzzles()
+        if not puzzles:
+            await interaction.response.send_message("No puzzles available.", ephemeral=True)
+            return
+        
+        embed = create_puzzle_list_embed(puzzles, "house_veridian")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @tree.command(name="puzzle_activate", description="Activate a puzzle in house channels (Admin only).", **guild_kw)
+    @is_admin_or_mod_check(config_mgr)
+    @app_commands.describe(
+        puzzle_id="The ID of the puzzle to activate",
+        veridian_channel="Channel for House Veridian",
+        feathered_channel="Channel for Feathered Host"
+    )
+    async def puzzle_activate(
+        interaction: discord.Interaction, 
+        puzzle_id: str,
+        veridian_channel: discord.TextChannel,
+        feathered_channel: discord.TextChannel
+    ):
+        puzzle = puzzle_mgr.get_puzzle_by_id(puzzle_id)
+        if not puzzle:
+            await interaction.response.send_message(f"❌ Puzzle `{puzzle_id}` not found.", ephemeral=True)
+            return
+        
+        puzzle_mgr.set_puzzle_channels(puzzle_id, str(veridian_channel.id), str(feathered_channel.id))
+        puzzle_mgr.activate_puzzle(puzzle_id)
+        
+        veridian_embed = create_puzzle_embed(puzzle, "house_veridian")
+        feathered_embed = create_puzzle_embed(puzzle, "feathered_host")
+        
+        await veridian_channel.send(embed=veridian_embed)
+        await feathered_channel.send(embed=feathered_embed)
+        
+        await interaction.response.send_message(
+            f"✅ Puzzle **{puzzle['title']}** activated in both house channels!", 
+            ephemeral=True
+        )
+
+    @tree.command(name="puzzle_deactivate", description="Deactivate a puzzle (Admin only).", **guild_kw)
+    @is_admin_or_mod_check(config_mgr)
+    @app_commands.describe(puzzle_id="The ID of the puzzle to deactivate")
+    async def puzzle_deactivate(interaction: discord.Interaction, puzzle_id: str):
+        puzzle = puzzle_mgr.get_puzzle_by_id(puzzle_id)
+        if not puzzle:
+            await interaction.response.send_message(f"❌ Puzzle `{puzzle_id}` not found.", ephemeral=True)
+            return
+        
+        puzzle_mgr.deactivate_puzzle(puzzle_id)
+        await interaction.response.send_message(
+            f"✅ Puzzle **{puzzle['title']}** deactivated.", 
+            ephemeral=True
+        )

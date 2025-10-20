@@ -59,6 +59,15 @@ To edit manually, stop the bot, modify the JSON, and restart. Use `/config_weigh
 | `/advance_stage` | Advance to the next stage within the current season. (Admins/Mods) |
 | `/set_solution solution [points:number]` | Set the correct answer and point value (default: 10) for the current stage. (Admins/Mods) |
 
+#### Puzzle Commands
+
+| Command | Description |
+|---------|-------------|
+| `/puzzle_list` | View all available puzzles and their status. |
+| `/puzzle_activate puzzle_id veridian_channel feathered_channel` | Activate a puzzle in specified house channels. (Admins/Mods) |
+| `/puzzle_deactivate puzzle_id` | Deactivate an active puzzle. (Admins/Mods) |
+| *Just type your answer* | In puzzle channels, simply type your answer - no command needed! |
+
 ### Scoring Logic
 
 - Adding to a player: Adds base points to their score and (if they have a house role) weighted points to their house.
@@ -96,3 +105,39 @@ The bot includes a season system for running competitive word-guessing games bet
 6. Repeat...
 
 Season data is stored in `houseledger_season.json`. Use `/season` and `/stage` to view current progress, `/submit` to participate, and admin commands to manage the competition.
+
+### Puzzle System
+
+The bot includes an independent puzzle system that runs parallel to seasons/stages. Puzzles are special challenges that can be activated at any time for bonus points.
+
+**Key Features:**
+- **Independent System**: Puzzles don't affect season/stage progression
+- **JSON Configuration**: All puzzles defined in `puzzles.json`
+- **House-Specific Channels**: Each puzzle displays in dedicated channels for both houses
+- **Beautiful Embeds**: Themed embeds with house colors and emojis (⚔️ for Veridian, 🪶 for Feathered Host)
+- **Natural Submission**: Users just type their answer in the channel - no command needed
+- **First Correct Wins**: Only one house can solve each puzzle
+- **Custom Points**: Each puzzle has its own point value
+- **Auto-Close**: Puzzles deactivate automatically when solved
+
+**How It Works:**
+1. Admin activates puzzle: `/puzzle_activate puzzle_1 #veridian-puzzles #feathered-puzzles`
+2. Beautiful embed appears in both house channels with the challenge
+3. House members type their answers directly in the channel
+4. First correct answer wins the points for their house
+5. Celebration embed appears, puzzle closes automatically
+
+**Puzzle Submission:**
+- No slash command required - just type your answer
+- Case-insensitive matching
+- Wrong answers show brief "not quite" message (auto-deletes after 5s)
+- Correct answer triggers celebration, awards points, updates scoreboard
+
+**Strategic Uses:**
+- Bonus challenges during seasons
+- Tie-breakers when houses are close
+- Special events or themed puzzles
+- Multi-day challenges
+- Mix of difficulty levels for variety
+
+Puzzle configuration is stored in `puzzles.json`. See `example.puzzles.json` for sample puzzle structure.

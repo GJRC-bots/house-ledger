@@ -1,0 +1,79 @@
+{
+  "puzzles": [
+    {
+      "id": "puzzle_1",
+      "title": "🔮 The Offering of Whispers",
+      "description": "In the depths of the ancient library, a cryptic message surfaces. The houses must decipher its meaning to claim their reward.",
+      "puzzle_content": "**DVYZOPW / AOYVBNO / JVTWLAPAPVU**\n\n*The seventh seal, the seventh step,*\n*Where Caesar once wept.*\n*Shift the letters back through time,*\n*To reveal the hidden rhyme.*",
+      "hint": "Think about Caesar cipher and the number seven. Try shifting each letter backwards in the alphabet.",
+      "image_url": "",
+      "footer_text": "🕰️ Time is of the essence...",
+      "house_veridian_channel": "",
+      "feathered_host_channel": "",
+      "points": 25,
+      "solution": "awry",
+      "active": false,
+      "solved_by": null
+    },
+    {
+      "id": "puzzle_2",
+      "title": "🌙 The Midnight Riddle",
+      "description": "As moonlight spills through the chamber windows, an ancient riddle appears on the wall. Only the keenest minds will prevail.",
+      "puzzle_content": "**I speak without a mouth and hear without ears.**\n**I have no body, but I come alive with wind.**\n**What am I?**",
+      "hint": "Think about natural phenomena that can travel and be 'heard'",
+      "image_url": "",
+      "footer_text": "🌌 The moon watches and waits...",
+      "house_veridian_channel": "",
+      "feathered_host_channel": "",
+      "points": 15,
+      "solution": "echo",
+      "active": false,
+      "solved_by": null
+    },
+    {
+      "id": "puzzle_3",
+      "title": "⚡ The Lightning Sequence",
+      "description": "A pattern emerges from the storm. Can your house see what comes next?",
+      "puzzle_content": "**Complete the sequence:**\n\n2, 3, 5, 7, 11, 13, 17, ?\n\n*The pattern is older than kingdoms,*\n*Known to scholars and sages.*",
+      "hint": "These are special numbers that can only be divided by 1 and themselves",
+      "image_url": "",
+      "footer_text": "⚡ Strike while the lightning flashes!",
+      "house_veridian_channel": "",
+      "feathered_host_channel": "",
+      "points": 20,
+      "solution": "19",
+      "active": false,
+      "solved_by": null
+    },
+    {
+      "id": "puzzle_4",
+      "title": "🗝️ The Binary Vault",
+      "description": "Ancient technology meets modern challenge. Decode the vault's binary lock to claim victory.",
+      "puzzle_content": "**01001000 01001111 01010000 01000101**\n\n*Four words in binary form,*\n*Convert each to see the storm.*\n*The answer is what you decode,*\n*Type it out to break the code.*",
+      "hint": "Each group of 8 digits represents one letter. Convert binary to decimal, then decimal to ASCII characters.",
+      "image_url": "",
+      "footer_text": "🔐 The vault awaits your command...",
+      "house_veridian_channel": "",
+      "feathered_host_channel": "",
+      "points": 30,
+      "solution": "hope",
+      "active": false,
+      "solved_by": null
+    },
+    {
+      "id": "puzzle_5",
+      "title": "🎭 The Mirror's Reflection",
+      "description": "Look not at what you see, but at what you perceive. The mirror holds secrets for those who dare to look deeper.",
+      "puzzle_content": "**ɘmoɔ γɒm ƨɿɘwƨnɒ ɘʜT**\n\n*What appears backwards is actually forward,*\n*What seems complex is actually simple.*\n*Read with new eyes to find the truth.*",
+      "hint": "Try reading the text in a mirror, or reverse each word letter by letter",
+      "image_url": "",
+      "footer_text": "🪞 Reflections reveal reality...",
+      "house_veridian_channel": "",
+      "feathered_host_channel": "",
+      "points": 18,
+      "solution": "answers",
+      "active": false,
+      "solved_by": null
+    }
+  ]
+}
