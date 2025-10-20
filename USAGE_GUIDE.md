@@ -11,13 +11,18 @@ This Discord bot manages a competition between two houses with word-guessing sta
 - `/season` - View current season information
 
 #### 2. Set the Word to Guess
-- `/set_solution <solution>` - Set the word/answer for the current stage
-  - Example: `/set_solution phoenix`
+
+- `/set_solution <solution> [points]` - Set the word/answer for the current stage
+  - `solution`: The word to guess (case-insensitive)
+  - `points`: Points awarded for solving (optional, default: 10)
+  - Example: `/set_solution phoenix` - Worth 10 points (default)
+  - Example: `/set_solution dragon 25` - Worth 25 points
   - The solution is case-insensitive and trimmed of whitespace
 
 #### 3. Manage Stages
+
 - `/advance_stage` - Move to the next stage within the current season
-- `/stage` - View current stage information and stats
+- `/stage` - View current stage information, stats, and points value
 
 #### 4. Configure Display
 - `/set_display_channel` - Set up auto-updating scoreboard in current channel
@@ -30,9 +35,10 @@ This Discord bot manages a competition between two houses with word-guessing sta
 ### User Commands
 
 #### Submit Answers
+
 - `/submit <answer>` - Try to guess the word for the current stage
   - Example: `/submit phoenix`
-  - **Correct answer**: Awards 10 points (weighted), updates display, logs to log channel
+  - **Correct answer**: Awards points (default 10, or custom amount set by admin), updates display, logs to log channel
   - **Incorrect answer**: Shows "Incorrect. Try again!" (no logging of wrong attempts)
   - **Already solved**: Shows message that stage is complete
 
@@ -50,52 +56,21 @@ This Discord bot manages a competition between two houses with word-guessing sta
 
 ## Typical Workflow
 
-1. **Start a Season**: `/advance_season`
-2. **Set the Word**: `/set_solution mysecretword`
-3. **Users Guess**: Users run `/submit theirguess`
-4. **Correct Guess**: 
-   - User gets 10 points (weighted)
+1. **Set the Word**: `/set_solution mysecretword` (default 10 points)
+   - OR `/set_solution mysecretword 25` (custom 25 points)
+2. **Users Guess**: Users run `/submit theirguess`
+3. **Correct Guess**:
+   - User gets points (weighted by house size if enabled)
    - Stage is marked as completed
    - Log channel gets success notification
    - Display board auto-updates
-5. **Next Stage**: `/advance_stage`
-6. **Repeat**: Set new word and continue
-
-## Key Features
-
-- ✅ No logging of incorrect attempts (privacy-friendly)
-- ✅ Auto-updating display board on correct answers
-- ✅ Weighted scoring based on house sizes
-- ✅ Multi-embed scoreboard system
-- ✅ Stage progression tracking
-- ✅ Season management
-- ✅ Comprehensive leaderboards
-
-## Configuration
-
-Edit `houseledger_config.json`:
-```json
-{
-  "guild_id": "your_guild_id",
-  "mod_role_id": "moderator_role_id",
-  "house_roles": {
-    "house_veridian": "role_id",
-    "feathered_host": "role_id"
-  },
-  "channels": {
-    "log": "channel_id_for_logs"
-  },
-  "weighting": {
-    "enabled": false,
-    "rounding": "round"
-  }
-}
-```
+4. **Next Stage**: `/advance_stage`
+5. **Repeat**: Set new word with different point values and continue
 
 ## Notes
 
-- Solutions are stored in `houseledger_season.json`
-- Scores are stored in `houseledger_scores.json`
 - All answers are case-insensitive
 - Stages can only be solved once (first correct answer wins)
 - Points are awarded with house-size weighting if enabled
+- Different stages can have different point values (e.g., easy = 5 points, hard = 25 points)
+- Default point value is 10 if not specified

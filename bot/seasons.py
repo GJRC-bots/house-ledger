@@ -63,6 +63,7 @@ class SeasonManager:
                     "1": {
                         "name": "Stage 1",
                         "solution": "",
+                        "points": 10,
                         "submissions": [],
                         "completed": False
                     }
@@ -83,6 +84,7 @@ class SeasonManager:
             season["stages"][str(next_stage)] = {
                 "name": f"Stage {next_stage}",
                 "solution": "",
+                "points": 10,
                 "submissions": [],
                 "completed": False
             }
@@ -91,12 +93,13 @@ class SeasonManager:
         self.save()
         return f"Advanced to Stage {next_stage}"
 
-    def set_stage_solution(self, solution: str) -> str:
-        """Set the solution for the current stage."""
+    def set_stage_solution(self, solution: str, points: int = 10) -> str:
+        """Set the solution and points for the current stage."""
         stage = self.get_current_stage()
         stage["solution"] = solution.lower().strip()
+        stage["points"] = points
         self.save()
-        return f"Set solution for {stage['name']}"
+        return f"Set solution for {stage['name']} (worth {points} points)"
 
     def submit_answer(self, user_id: str, answer: str) -> tuple[str, bool]:
         """Submit an answer for the current stage.
@@ -161,5 +164,6 @@ class SeasonManager:
             "total_submissions": len(submissions),
             "correct_submissions": correct_count,
             "has_solution": bool(stage.get("solution")),
-            "completed": stage.get("completed", False)
+            "completed": stage.get("completed", False),
+            "points": stage.get("points", 10)
         }

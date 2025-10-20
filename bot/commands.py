@@ -366,6 +366,7 @@ def setup_commands(
             name="📈 Stats",
             value=f"**Total Submissions:** {stage_stats['total_submissions']}\n"
                   f"**Correct Answers:** {stage_stats['correct_submissions']}\n"
+                  f"**Points Value:** {stage_stats['points']}\n"
                   f"**Solved:** {'✅' if stage_stats['completed'] else '❌'}",
             inline=False
         )
@@ -403,13 +404,16 @@ def setup_commands(
         result, was_correct = season_mgr.submit_answer(str(interaction.user.id), answer)
         
         if was_correct:
+            stage = season_mgr.get_current_stage()
+            stage_points = stage.get("points", 10)
+            
             await score_mgr.add_points(
                 guild=guild,
                 actor_id=interaction.user.id,
                 target="player",
                 target_id=str(interaction.user.id),
-                base_points=10,
-                reason=f"Solved {season_mgr.get_current_stage().get('name', 'Stage')}",
+                base_points=stage_points,
+                reason=f"Solved {stage.get('name', 'Stage')}",
                 weighted=True
             )
         
@@ -435,13 +439,14 @@ def setup_commands(
                                 break
                     
                     stage_name = season_mgr.get_current_stage().get('name', 'Unknown Stage')
+                    stage_points = season_mgr.get_current_stage().get('points', 10)
                     embed = discord.Embed(
                         title="🎉 Stage Solved!",
                         description=f"**{user_name}** from **{house_name}** has solved **{stage_name}**!",
                         color=0x27ae60,
                         timestamp=interaction.created_at
                     )
-                    embed.add_field(name="Points Awarded", value="10 points (weighted)", inline=False)
+                    embed.add_field(name="Points Awarded", value=f"{stage_points} points (weighted)", inline=False)
                     
                     await log_channel.send(embed=embed)
             except Exception:
@@ -466,7 +471,10 @@ def setup_commands(
 
     @tree.command(name="set_solution", description="Set the solution for the current stage (Admin only).", **guild_kw)
     @is_admin_or_mod_check(config_mgr)
-    @app_commands.describe(solution="The correct answer for the current stage")
-    async def set_solution(interaction: discord.Interaction, solution: str):
-        result = season_mgr.set_stage_solution(solution)
+    @app_commands.describe(
+        solution="The correct answer for the current stage",
+        points="Points awarded for solving (default: 10)"
+    )
+    async def set_solution(interaction: discord.Interaction, solution: str, points: int = 10):
+        result = season_mgr.set_stage_solution(solution, points)
         await interaction.response.send_message(f"✅ {result}", ephemeral=True)

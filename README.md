@@ -53,11 +53,11 @@ To edit manually, stop the bot, modify the JSON, and restart. Use `/config_weigh
 | Command | Description |
 |---------|-------------|
 | `/season` | Show current season information and stats. |
-| `/stage` | Show current stage information and submission stats. |
-| `/submit answer` | Submit an answer for the current stage. |
+| `/stage` | Show current stage information, submission stats, and points value. |
+| `/submit answer` | Submit an answer for the current stage. Awards points on correct answer. |
 | `/advance_season` | Advance to the next season. (Admins/Mods) |
 | `/advance_stage` | Advance to the next stage within the current season. (Admins/Mods) |
-| `/set_solution solution` | Set the correct answer for the current stage. (Admins/Mods) |
+| `/set_solution solution [points:number]` | Set the correct answer and point value (default: 10) for the current stage. (Admins/Mods) |
 
 ### Scoring Logic
 
@@ -75,11 +75,24 @@ Use `/set_display_channel` to set up a pinned scoreboard in a channel that updat
 
 ### Season System
 
-The bot includes a season system for running competitive puzzle games or challenges. Each season contains multiple stages, and users can submit answers to each stage.
+The bot includes a season system for running competitive word-guessing games between houses. Each season contains multiple stages, and users compete to solve them first.
 
+**Key Features:**
 - **Seasons**: Long-term competitions with multiple stages
-- **Stages**: Individual challenges within a season that users can submit answers to
-- **Submissions**: Users can submit one answer per stage; admins set the correct solution
-- **Progression**: Admins can advance seasons and stages as needed
+- **Stages**: Individual word-guessing challenges within a season
+- **Custom Points**: Each stage can have different point values (default: 10)
+- **Submissions**: Users can submit multiple attempts until someone gets it right
+- **First Correct Wins**: Once a stage is solved, submissions close automatically
+- **No Wrong Answer Logging**: Only correct answers are logged to maintain privacy
+- **Weighted Scoring**: Points are weighted by house size if enabled
+- **Auto-Updates**: Display board updates automatically when stages are solved
+
+**Typical Workflow:**
+1. Admin sets a word: `/set_solution phoenix 25` (25 points for this stage)
+2. Users guess: `/submit eagle` (wrong - can try again)
+3. User guesses: `/submit phoenix` (correct - wins 25 points, stage closes)
+4. Admin advances: `/advance_stage`
+5. Admin sets new word: `/set_solution dragon 10` (10 points for this stage)
+6. Repeat...
 
 Season data is stored in `houseledger_season.json`. Use `/season` and `/stage` to view current progress, `/submit` to participate, and admin commands to manage the competition.
