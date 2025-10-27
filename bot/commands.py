@@ -370,15 +370,43 @@ def setup_commands(
             value=f"**Total Submissions:** {stage_stats['total_submissions']}\n"
                   f"**Correct Answers:** {stage_stats['correct_submissions']}\n"
                   f"**Points Value:** {stage_stats['points']}\n"
-                  f"**Solved:** {'✅' if stage_stats['completed'] else '❌'}",
+                  f"**Houses Solved:** {stage_stats['unique_solvers']}/2",
             inline=False
         )
+
+        # Show which houses have solved
+        leaderboard = season_mgr.get_stage_leaderboard()
+        if leaderboard:
+            solved_text = ""
+            for solver in leaderboard:
+                house_key = solver['house_key']
+                house_name = "House Veridian" if house_key == "house_veridian" else "Feathered Host"
+                points = solver['points_awarded']
+                position = solver['solve_position']
+                emoji = "🥇" if position == 1 else "🥈"
+                solved_text += f"{emoji} **{house_name}**: {points} points\n"
+            
+            embed.add_field(
+                name="✅ Solved By",
+                value=solved_text,
+                inline=False
+            )
+            
+            # Show remaining opportunity
+            if stage_stats['unique_solvers'] == 1:
+                remaining_points = int(stage_stats['points'] * 0.5)
+                unsolved_house = "Feathered Host" if leaderboard[0]['house_key'] == "house_veridian" else "House Veridian"
+                embed.add_field(
+                    name="🔥 Still Available",
+                    value=f"**{unsolved_house}** can solve for **{remaining_points} points** (50%)",
+                    inline=False
+                )
 
         if stage_stats['has_solution']:
             if stage_stats['completed']:
                 embed.add_field(
                     name="✅ Status",
-                    value="Stage has been solved! Submissions are closed.",
+                    value="Both houses have solved this stage!",
                     inline=False
                 )
             else:
@@ -404,61 +432,125 @@ def setup_commands(
             await interaction.response.send_message("Run this inside a server.", ephemeral=True)
             return
 
-        result, was_correct = season_mgr.submit_answer(str(interaction.user.id), answer)
+        # Determine which house the user belongs to
+        member = guild.get_member(interaction.user.id)
+        house_key = None
+        house_display = None
+        
+        if member:
+            role_ids = config_mgr.get_house_role_ids()
+            for hkey, role_id_list in role_ids.items():
+                for role_id in role_id_list:
+                    if role_id and role_id.isdigit():
+                        role = guild.get_role(int(role_id))
+                        if role and role in member.roles:
+                            house_key = hkey
+                            house_display = title_case_house(hkey)
+                            break
+                if house_key:
+                    break
+        
+        if not house_key:
+            await interaction.response.send_message(
+                "You are not assigned to a house! Please contact a moderator.",
+                ephemeral=True
+            )
+            return
+
+        # Submit answer with house information
+        result, was_correct, points_awarded, _ = season_mgr.submit_answer(
+            str(interaction.user.id), 
+            house_key, 
+            answer
+        )
         
         if was_correct:
             stage = season_mgr.get_current_stage()
-            stage_points = stage.get("points", 10)
             
+            # Add points to player and house using the actual points awarded by season manager
             await score_mgr.add_points(
                 guild=guild,
                 actor_id=interaction.user.id,
                 target="player",
                 target_id=str(interaction.user.id),
-                base_points=stage_points,
+                base_points=points_awarded,
                 reason=f"Solved {stage.get('name', 'Stage')}",
                 weighted=True
             )
+        else:
+            # Deduct 1 point for wrong answer
+            await score_mgr.add_points(
+                guild=guild,
+                actor_id=interaction.user.id,
+                target="player",
+                target_id=str(interaction.user.id),
+                base_points=-1,
+                reason="Wrong answer",
+                weighted=True
+            )
         
+        # Log to the log channel if configured
         log_channel_id = config_mgr.get_log_channel_id()
         if log_channel_id and was_correct:
             try:
                 log_channel = guild.get_channel(int(log_channel_id))
                 if log_channel:
-                    member = guild.get_member(interaction.user.id)
                     user_name = member.display_name if member else f"User {interaction.user.id}"
-                    
-                    house_name = "No House"
-                    if member:
-                        role_ids = config_mgr.get_house_role_ids()
-                        for house_key, role_id_list in role_ids.items():
-                            for role_id in role_id_list:
-                                if role_id and role_id.isdigit():
-                                    role = guild.get_role(int(role_id))
-                                    if role and role in member.roles:
-                                        house_name = title_case_house(house_key)
-                                        break
-                            if house_name != "No House":
-                                break
-                    
                     stage_name = season_mgr.get_current_stage().get('name', 'Unknown Stage')
-                    stage_points = season_mgr.get_current_stage().get('points', 10)
+                    
+                    # Check if this was first or second solve
+                    stage_stats = season_mgr.get_stage_stats()
+                    solve_position = stage_stats['unique_solvers']
+                    
+                    if solve_position == 1:
+                        title = "🎉 First Solve!"
+                        color = 0xFFD700  # Gold
+                        points_desc = f"{points_awarded} points (100% - First House)"
+                    else:
+                        title = "✅ Stage Solved!"
+                        color = 0x27ae60  # Green
+                        points_desc = f"{points_awarded} points (50% - Second House)"
+                    
                     embed = discord.Embed(
-                        title="🎉 Stage Solved!",
-                        description=f"**{user_name}** from **{house_name}** has solved **{stage_name}**!",
-                        color=0x27ae60,
+                        title=title,
+                        description=f"**{user_name}** from **{house_display}** has solved **{stage_name}**!",
+                        color=color,
                         timestamp=interaction.created_at
                     )
-                    embed.add_field(name="Points Awarded", value=f"{stage_points} points (weighted)", inline=False)
+                    embed.add_field(name="Points Awarded", value=points_desc, inline=False)
+                    
+                    # Show which house still needs to solve (if applicable)
+                    if solve_position == 1:
+                        other_house = "Feathered Host" if house_key == "house_veridian" else "House Veridian"
+                        embed.add_field(
+                            name="Next",
+                            value=f"{other_house} can still solve for 50% points!",
+                            inline=False
+                        )
+                    else:
+                        embed.add_field(
+                            name="Stage Complete",
+                            value="Both houses have solved this stage!",
+                            inline=False
+                        )
                     
                     await log_channel.send(embed=embed)
             except Exception:
                 pass
         
-        if was_correct:
-            await update_display_message(guild, config_mgr, score_mgr)
+        # Update the display message after any submission (correct or incorrect)
+        await update_display_message(guild, config_mgr, score_mgr)
         
-        await interaction.response.send_message(result, ephemeral=True)
+        # Format the message to display the attempt/solution
+        user_mention = interaction.user.mention
+        if was_correct:
+            # Show the solution for correct answers
+            message = f"{user_mention}: {result}\n**Solution:** `{answer}`"
+        else:
+            # Show the wrong attempt
+            message = f"{user_mention}: {result}\n**Submitted:** `{answer}`"
+        
+        await interaction.response.send_message(message, ephemeral=False)
 
     @tree.command(name="advance_season", description="Advance to the next season (Admin only).", **guild_kw)
     @is_admin_or_mod_check(config_mgr)
@@ -522,6 +614,59 @@ def setup_commands(
         
         await interaction.response.send_message(
             f"✅ Puzzle **{puzzle['title']}** activated in both house channels!", 
+            ephemeral=True
+        )
+
+    @tree.command(name="puzzle_activate_timed", description="Activate a timed puzzle with different durations per house (Admin only).", **guild_kw)
+    @is_admin_or_mod_check(config_mgr)
+    @app_commands.describe(
+        puzzle_id="The ID of the puzzle to activate",
+        veridian_channel="Channel for House Veridian",
+        feathered_channel="Channel for Feathered Host",
+        base_points="Base points (will decay with time)",
+        veridian_minutes="Time limit for House Veridian in minutes",
+        feathered_minutes="Time limit for Feathered Host in minutes"
+    )
+    async def puzzle_activate_timed(
+        interaction: discord.Interaction, 
+        puzzle_id: str,
+        veridian_channel: discord.TextChannel,
+        feathered_channel: discord.TextChannel,
+        base_points: int,
+        veridian_minutes: int,
+        feathered_minutes: int
+    ):
+        puzzle = puzzle_mgr.get_puzzle_by_id(puzzle_id)
+        if not puzzle:
+            await interaction.response.send_message(f"❌ Puzzle `{puzzle_id}` not found.", ephemeral=True)
+            return
+        
+        # Set channels
+        puzzle_mgr.set_puzzle_channels(puzzle_id, str(veridian_channel.id), str(feathered_channel.id))
+        
+        # Activate as timed puzzle
+        puzzle_mgr.activate_timed_puzzle(
+            puzzle_id=puzzle_id,
+            base_points=base_points,
+            veridian_minutes=veridian_minutes,
+            feathered_minutes=feathered_minutes
+        )
+        
+        # Create embeds with countdown
+        veridian_embed = create_puzzle_embed(puzzle, "house_veridian", timed=True)
+        feathered_embed = create_puzzle_embed(puzzle, "feathered_host", timed=True)
+        
+        # Send messages
+        veridian_msg = await veridian_channel.send(embed=veridian_embed)
+        feathered_msg = await feathered_channel.send(embed=feathered_embed)
+        
+        # Store message IDs for auto-updating
+        puzzle_mgr.update_timed_message_ids(puzzle_id, str(veridian_msg.id), str(feathered_msg.id))
+        
+        await interaction.response.send_message(
+            f"✅ Timed puzzle **{puzzle['title']}** activated!\n"
+            f"⏰ House Veridian: {veridian_minutes} minutes ({base_points} points max)\n"
+            f"⏰ Feathered Host: {feathered_minutes} minutes ({base_points} points max)", 
             ephemeral=True
         )
 
