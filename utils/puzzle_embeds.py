@@ -21,7 +21,7 @@ HOUSE_THEMES = {
     }
 }
 
-def create_puzzle_embed(puzzle: Dict[str, Any], house: str) -> discord.Embed:
+def create_puzzle_embed(puzzle: Dict[str, Any], house: str, timed: bool = False) -> discord.Embed:
     """Create a beautiful puzzle embed for a specific house"""
     theme = HOUSE_THEMES.get(house, HOUSE_THEMES["house_veridian"])
     
@@ -39,12 +39,31 @@ def create_puzzle_embed(puzzle: Dict[str, Any], house: str) -> discord.Embed:
         inline=False
     )
     
-    # Points value
-    embed.add_field(
-        name="💎 Reward",
-        value=f"**{puzzle['points']} Points**",
-        inline=True
-    )
+    # For timed puzzles, show time-based info
+    if timed and puzzle.get('timed'):
+        timed_config = puzzle.get('timed_config', {})
+        house_config = timed_config.get(house, {})
+        base_points = timed_config.get('base_points', 0)
+        duration = house_config.get('duration_minutes', 0)
+        
+        embed.add_field(
+            name="⏰ Time Limit",
+            value=f"**{duration} minutes**",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="💎 Max Reward",
+            value=f"**{base_points} Points**\n*(Decays with time)*",
+            inline=True
+        )
+    else:
+        # Points value for non-timed puzzles
+        embed.add_field(
+            name="💎 Reward",
+            value=f"**{puzzle['points']} Points**",
+            inline=True
+        )
     
     # Hint (if available)
     if puzzle.get('hint'):
@@ -145,13 +164,13 @@ def create_puzzle_list_embed(puzzles: list, house: str = "house_veridian") -> di
     return embed
 
 
-def create_wrong_answer_embed(house: str) -> discord.Embed:
+def create_wrong_answer_embed(house: str, wrong_attempt: str, user_name: str) -> discord.Embed:
     """Create an embed for wrong answers"""
     theme = HOUSE_THEMES.get(house, HOUSE_THEMES["house_veridian"])
     
     embed = discord.Embed(
         title=f"{theme['accent']} Not Quite... {theme['accent']}",
-        description=f"That's not the correct answer. Keep trying!\n\n*The puzzle awaits your wisdom...*",
+        description=f"**{user_name}** tried: `{wrong_attempt}`\n\nThat's not the correct answer. Keep trying!\n\n*The puzzle awaits your wisdom...*",
         color=theme['color']
     )
     
